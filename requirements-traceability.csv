@@ -27,3 +27,7 @@ OPS-01,Ops,Daily backup RPO<=24h + tested restore,docs/adr/0010-backup-restore.m
 OPS-02,Ops,Reproducible deploy (Docker Compose + Caddy TLS),docs/adr/0001-modular-monolith.md,docker-compose*.yml + infra/,,compose+Dockerfiles+Caddyfile,PARTIAL
 OPS-03,Ops,Background jobs with persistent state,docs/adr/0006-jobs-outbox.md,src/worker/main.ts,,worker scaffold,PARTIAL
 OPS-04,Ops,No paid core dependency (license inventory),doc 08,docs/LICENSE_INVENTORY.md,,pnpm licenses list,PARTIAL
+IMP-01,Import,CSV parse + row validation + atomic (no silent partial overwrite),doc 04/08,src/domain/import/index.ts,src/domain/import/import.test.ts,11 tests; canCommit only when 0 errors,DONE
+UI-01,UX,Dashboard A control-centre (status rail + accessible map fallback),doc 02/09,src/app/page.tsx + src/components,,a11y tree + WCAG AA contrast measured in-browser,PARTIAL
+UI-02,UX,Technician B today shell (mobile-first PWA),doc 02,src/app/today/page.tsx,,verified render at 375px,PARTIAL
+OFF-03,Offline,Installable PWA + offline navigation fallback,doc 08,src/app/manifest.ts + public/sw.js,,manifest/sw/offline serve 200,PARTIAL
