@@ -1,5 +1,9 @@
 # ▶ START HERE — resume the SOS maintenance build
 
+> Continuing on a **different machine / location**? Read
+> [`START_TOMORROW.md`](START_TOMORROW.md) — it walks through cloning fresh
+> anywhere and getting a new Claude session up to speed.
+
 _Always-current pointer. Read this first when you sit down at a machine._
 _Last updated: 2026-07-21 (late evening, autonomous session)._
 

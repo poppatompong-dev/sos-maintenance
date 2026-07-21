@@ -4,6 +4,7 @@
 ช่วยเหลือฉุกเฉิน (SOS) 27 จุด (EP01–EP27) ตอบได้ทันทีว่าเสาใด **พร้อมใช้ / เฝ้าระวัง /
 ใช้งานไม่ได้ / ยังไม่ทราบ** พร้อมสืบย้อนกลับถึงหลักฐาน
 
+> **Continuing from another machine?** See [`docs/START_TOMORROW.md`](docs/START_TOMORROW.md).
 > **New here or resuming?** Read [`docs/RESUME_HERE.md`](docs/RESUME_HERE.md) first,
 > then [`docs/WORKLOG.md`](docs/WORKLOG.md) for history and [`docs/DESIGN.md`](docs/DESIGN.md)
 > for the UI system. Requirements & decisions live in the `docs/spec/` handoff pack (01–09);
