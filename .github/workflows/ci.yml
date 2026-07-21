@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy URL — no live DB needed for generate/typecheck/lint/test/build.
+      DATABASE_URL: postgresql://sos:sos@localhost:5432/sos?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+      - name: Prisma schema format check
+        run: pnpm exec prisma validate
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Unit tests
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  # Integration job runs against a real Postgres+PostGIS. Enabled as DB-backed
+  # migrations & repositories land (Sprint 2+). Kept here so the pipeline shape
+  # is defined from day one.
+  integration:
+    runs-on: ubuntu-latest
+    if: false # flip on once migrations + repository tests exist
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: sos
+          POSTGRES_PASSWORD: sos
+          POSTGRES_DB: sos
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sos" --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://sos:sos@localhost:5432/sos?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:setup
+      - run: pnpm test

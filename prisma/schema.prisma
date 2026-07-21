@@ -1,0 +1,662 @@
+// ระบบบริหารซ่อมบำรุงเสา SOS — โครงข้อมูลหลัก (doc 04 & 08)
+// Generic CMMS core (AssetType-driven) with an SOS-specific V1 seed.
+//
+// Conventions:
+//   - UUID primary keys everywhere; audit timestamps on every table.
+//   - Mutable aggregates carry `version` for optimistic concurrency.
+//   - Master data is soft-retired (`retiredAt`), never hard-deleted.
+//   - Used checklist versions & readiness snapshots are immutable (append-only).
+//   - Geography: `longitude`/`latitude` (WGS84) are the source columns; a PostGIS
+//     `geography(Point,4326)` generated column + GiST index are added by
+//     prisma/sql/001_enable_postgis.sql. Distance is computed server-side.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+// ─────────────────────────────────────────────────────────────── Enums ──────
+
+enum AssetLifecycleStatus {
+  PLANNED
+  ACTIVE
+  RETIRED
+}
+
+enum ReadinessStatus {
+  READY
+  WATCH
+  DOWN
+  UNKNOWN
+}
+
+enum Criticality {
+  CRITICAL
+  NON_CRITICAL
+}
+
+enum ComponentStatus {
+  OK
+  DEGRADED
+  FAILED
+  UNKNOWN
+}
+
+enum MaintenanceKind {
+  INITIAL_SURVEY
+  WEEKLY_CENTER
+  MONTHLY_FIELD
+  SEMIANNUAL_DEEP
+  CORRECTIVE
+}
+
+enum RecurrenceFrequency {
+  NONE
+  WEEKLY
+  MONTHLY
+  SEMIANNUAL
+}
+
+enum ChecklistItemKind {
+  BOOLEAN_PASS_FAIL
+  NUMBER
+  TEXT
+  PHOTO
+  SELECT
+}
+
+enum ResponseResult {
+  PASS
+  FAIL
+  NA
+  UNKNOWN
+}
+
+enum ScheduleBatchStatus {
+  DRAFT
+  APPROVED
+  PUBLISHED
+}
+
+enum WorkOrderStatus {
+  DRAFT
+  PUBLISHED
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  CLOSED
+  REJECTED
+  REOPENED
+  CANCELLED
+}
+
+enum FaultStatus {
+  OPEN
+  IN_REPAIR
+  RETEST
+  RESOLVED
+  REOPENED
+}
+
+enum HealthStatus {
+  ONLINE
+  OFFLINE
+  DEGRADED
+  UNKNOWN
+}
+
+enum HealthSource {
+  MANUAL
+  IMPORT
+  ADAPTER
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum ImportStatus {
+  UPLOADED
+  PARSED
+  PREVIEWED
+  VALIDATED
+  COMMITTED
+  ROLLED_BACK
+  FAILED
+}
+
+enum AppRole {
+  SYSTEM_ADMIN
+  PLANNER
+  TECHNICIAN
+  EXECUTIVE
+}
+
+enum ReadinessTrigger {
+  CHECKLIST_SUBMIT
+  FAULT_OPENED
+  FAULT_RESOLVED
+  REPAIR_ACCEPTED
+  RECONCILIATION
+  BASELINE_APPROVED
+  IMPORT
+}
+
+// ─────────────────────────────────────────────────────── Identity / RBAC ────
+
+/// Application-side mirror of a Keycloak subject. Credentials & MFA live in
+/// Keycloak — this table holds no passwords, only the subject id + profile.
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  keycloakId     String?   @unique
+  username       String    @unique
+  displayName    String
+  email          String?
+  roles          AppRole[]
+  active         Boolean   @default(true)
+  retiredAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  assignments        Assignment[]
+  approvedSurveys    Asset[]           @relation("BaselineApprover")
+  approvedBatches    ScheduleBatch[]   @relation("BatchApprover")
+  notifications      Notification[]
+
+  @@map("app_user")
+}
+
+// ─────────────────────────────────────────────────────── Asset core ─────────
+
+model AssetType {
+  id             String    @id @default(uuid()) @db.Uuid
+  key            String    @unique // e.g. 'SOS_POLE'
+  name           String
+  metadataSchema Json? // JSON Schema for type-specific fields
+  retiredAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  assets Asset[]
+
+  @@map("asset_type")
+}
+
+model Location {
+  id            String    @id @default(uuid()) @db.Uuid
+  code          String?   @unique // correlates 1:1 with an SOS pole in V1 (EP01..)
+  name          String
+  longitude     Float // WGS84 lon
+  latitude      Float // WGS84 lat
+  navigationNote String?
+  retiredAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  assets Asset[]
+
+  @@map("location")
+}
+
+model Asset {
+  id              String               @id @default(uuid()) @db.Uuid
+  code            String               @unique // EP01..EP27
+  name            String
+  assetTypeId     String               @db.Uuid
+  locationId      String               @db.Uuid
+  longitude       Float // canonical asset coordinate (may differ from Location after survey)
+  latitude        Float
+  qrToken         String               @unique // opaque token encoded in the QR
+  lifecycle       AssetLifecycleStatus @default(PLANNED)
+  orgUnit         String?
+  typeData        Json? // type-specific fields validated against AssetType.metadataSchema
+  baselineApproved Boolean             @default(false)
+  baselineApprovedAt DateTime?
+  baselineApproverId String?           @db.Uuid
+  currentReadiness ReadinessStatus     @default(UNKNOWN)
+  version         Int                  @default(0)
+  retiredAt       DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  assetType         AssetType          @relation(fields: [assetTypeId], references: [id])
+  location          Location           @relation(fields: [locationId], references: [id])
+  baselineApprover  User?              @relation("BaselineApprover", fields: [baselineApproverId], references: [id])
+  components        AssetComponent[]
+  workOrders        WorkOrder[]
+  faults            Fault[]
+  readinessSnapshots ReadinessSnapshot[]
+  healthObservations HealthObservation[]
+
+  @@index([assetTypeId])
+  @@index([locationId])
+  @@map("asset")
+}
+
+model AssetComponent {
+  id            String          @id @default(uuid()) @db.Uuid
+  assetId       String          @db.Uuid
+  key           String // stable key within asset, e.g. 'sos_button'
+  name          String
+  brand         String?
+  model         String?
+  serial        String?
+  installedAt   DateTime?
+  criticality   Criticality     @default(NON_CRITICAL)
+  status        ComponentStatus @default(UNKNOWN)
+  retiredAt     DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  @@unique([assetId, key])
+  @@index([assetId])
+  @@map("asset_component")
+}
+
+// ─────────────────────────────────────────── Checklist (versioned/immutable) ─
+
+model ChecklistTemplate {
+  id        String    @id @default(uuid()) @db.Uuid
+  key       String    @unique // e.g. 'MONTHLY_FIELD'
+  name      String
+  kind      MaintenanceKind
+  retiredAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  versions ChecklistTemplateVersion[]
+
+  @@map("checklist_template")
+}
+
+/// A published version is IMMUTABLE once referenced by any response/plan.
+model ChecklistTemplateVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  templateId  String   @db.Uuid
+  version     Int
+  publishedAt DateTime?
+  isLocked    Boolean  @default(false) // true once used — blocks edits
+  createdAt   DateTime @default(now())
+
+  template  ChecklistTemplate @relation(fields: [templateId], references: [id])
+  items     ChecklistItem[]
+  plans     MaintenancePlan[]
+  workOrders WorkOrder[]
+  responses ChecklistResponse[]
+
+  @@unique([templateId, version])
+  @@map("checklist_template_version")
+}
+
+model ChecklistItem {
+  id             String            @id @default(uuid()) @db.Uuid
+  versionId      String            @db.Uuid
+  order          Int
+  code           String // stable within version
+  label          String
+  kind           ChecklistItemKind @default(BOOLEAN_PASS_FAIL)
+  criticality    Criticality       @default(NON_CRITICAL)
+  criticalFunctionKey String? // maps to a critical function, e.g. 'sos_button'
+  requiresPhoto  Boolean           @default(false)
+  helpText       String?
+
+  version   ChecklistTemplateVersion @relation(fields: [versionId], references: [id])
+  responses ChecklistResponse[]
+
+  @@unique([versionId, code])
+  @@index([versionId])
+  @@map("checklist_item")
+}
+
+// ─────────────────────────────────────────── Maintenance planning ───────────
+
+model MaintenancePlan {
+  id                String              @id @default(uuid()) @db.Uuid
+  name              String
+  kind              MaintenanceKind
+  frequency         RecurrenceFrequency
+  assetTypeKey      String // scope: which asset type this plan applies to
+  checklistVersionId String             @db.Uuid
+  active            Boolean             @default(true)
+  retiredAt         DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  checklistVersion ChecklistTemplateVersion @relation(fields: [checklistVersionId], references: [id])
+  scheduleBatches  ScheduleBatch[]
+  workOrders       WorkOrder[]
+
+  @@unique([kind, assetTypeKey]) // one active plan per kind per asset type (V1)
+  @@map("maintenance_plan")
+}
+
+model ScheduleBatch {
+  id            String              @id @default(uuid()) @db.Uuid
+  planId        String              @db.Uuid
+  name          String
+  status        ScheduleBatchStatus @default(DRAFT)
+  approverId    String?             @db.Uuid
+  approvedAt    DateTime?
+  publishedAt   DateTime?
+  version       Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  plan       MaintenancePlan @relation(fields: [planId], references: [id])
+  approver   User?           @relation("BatchApprover", fields: [approverId], references: [id])
+  workOrders WorkOrder[]
+
+  @@index([planId])
+  @@map("schedule_batch")
+}
+
+// ─────────────────────────────────────────── Work / Fault / Repair ──────────
+
+model WorkOrder {
+  id                 String          @id @default(uuid()) @db.Uuid
+  code               String          @unique // WO-YYYY-NNNN
+  kind               MaintenanceKind
+  assetId            String          @db.Uuid
+  planId             String?         @db.Uuid
+  scheduleBatchId    String?         @db.Uuid
+  checklistVersionId String?         @db.Uuid
+  faultId            String?         @unique @db.Uuid // corrective WO ↔ its fault (idempotent)
+  status             WorkOrderStatus @default(DRAFT)
+  scheduledFor       DateTime?
+  dueAt              DateTime?
+  // MTTA/MTTR timestamps
+  detectedAt         DateTime?
+  acknowledgedAt     DateTime?
+  startedAt          DateTime?
+  temporaryMeasureAt DateTime?
+  repairedAt         DateTime?
+  submittedAt        DateTime?
+  reviewedAt         DateTime?
+  closedAt           DateTime?
+  reviewNote         String?
+  version            Int             @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  asset            Asset                     @relation(fields: [assetId], references: [id])
+  plan             MaintenancePlan?          @relation(fields: [planId], references: [id])
+  scheduleBatch    ScheduleBatch?            @relation(fields: [scheduleBatchId], references: [id])
+  checklistVersion ChecklistTemplateVersion? @relation(fields: [checklistVersionId], references: [id])
+  fault            Fault?                    @relation("FaultCorrectiveWorkOrder", fields: [faultId], references: [id])
+  assignments      Assignment[]
+  workLogs         WorkLog[]
+  responses        ChecklistResponse[]
+  repairActions    RepairAction[]
+  faultsFound      Fault[]                   @relation("FaultOriginWorkOrder")
+
+  @@index([assetId])
+  @@index([status])
+  @@map("work_order")
+}
+
+model Assignment {
+  id          String   @id @default(uuid()) @db.Uuid
+  workOrderId String   @db.Uuid
+  userId      String   @db.Uuid
+  assignedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([workOrderId, userId])
+  @@index([userId])
+  @@map("assignment")
+}
+
+/// Append-only log of state transitions & time events for a work order.
+model WorkLog {
+  id           String           @id @default(uuid()) @db.Uuid
+  workOrderId  String           @db.Uuid
+  fromStatus   WorkOrderStatus?
+  toStatus     WorkOrderStatus
+  actorId      String?          @db.Uuid
+  note         String?
+  occurredAt   DateTime         @default(now())
+  createdAt    DateTime         @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@index([workOrderId])
+  @@map("work_log")
+}
+
+model ChecklistResponse {
+  id                String         @id @default(uuid()) @db.Uuid
+  workOrderId       String         @db.Uuid
+  itemId            String         @db.Uuid
+  checklistVersionId String        @db.Uuid
+  result            ResponseResult
+  valueText         String?
+  valueNumber       Float?
+  note              String?
+  // GPS capture at time of inspection
+  capturedLat       Float?
+  capturedLng       Float?
+  distanceMeters    Float?
+  locationException Boolean        @default(false)
+  locationReason    String?
+  reviewFlag        Boolean        @default(false)
+  clientMutationId  String?        @unique // offline idempotency
+  observedAt        DateTime
+  createdAt         DateTime       @default(now())
+
+  workOrder        WorkOrder                @relation(fields: [workOrderId], references: [id])
+  item             ChecklistItem            @relation(fields: [itemId], references: [id])
+  checklistVersion ChecklistTemplateVersion @relation(fields: [checklistVersionId], references: [id])
+  attachments      Attachment[]
+
+  @@index([workOrderId])
+  @@index([itemId])
+  @@map("checklist_response")
+}
+
+model Fault {
+  id             String      @id @default(uuid()) @db.Uuid
+  code           String      @unique // FLT-YYYY-NNNN
+  assetId        String      @db.Uuid
+  originWorkOrderId String?  @db.Uuid
+  severity       Criticality
+  status         FaultStatus @default(OPEN)
+  symptom        String
+  sourceRef      String? // e.g. checklist item / critical function key
+  detectedAt     DateTime    @default(now())
+  resolvedAt     DateTime?
+  version        Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  asset           Asset          @relation(fields: [assetId], references: [id])
+  originWorkOrder WorkOrder?     @relation("FaultOriginWorkOrder", fields: [originWorkOrderId], references: [id])
+  correctiveWorkOrder WorkOrder? @relation("FaultCorrectiveWorkOrder")
+  repairActions   RepairAction[]
+
+  @@index([assetId])
+  @@index([status])
+  @@map("fault")
+}
+
+model RepairAction {
+  id            String    @id @default(uuid()) @db.Uuid
+  faultId       String    @db.Uuid
+  workOrderId   String    @db.Uuid
+  cause         String
+  fixDescription String
+  changedParts  String? // free text (no inventory in V1)
+  retestPassed  Boolean?
+  retestNote    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  fault       Fault        @relation(fields: [faultId], references: [id])
+  workOrder   WorkOrder    @relation(fields: [workOrderId], references: [id])
+  attachments Attachment[] // before/after photos
+
+  @@index([faultId])
+  @@map("repair_action")
+}
+
+// ─────────────────────────────────────────── Evidence & health ──────────────
+
+model Attachment {
+  id                 String  @id @default(uuid()) @db.Uuid
+  // polymorphic owner (kept alongside typed FKs for the common cases)
+  entityType         String // 'CHECKLIST_RESPONSE' | 'REPAIR_ACTION' | 'ASSET' | ...
+  entityId           String  @db.Uuid
+  checklistResponseId String? @db.Uuid
+  repairActionId     String? @db.Uuid
+  storageKey         String  @unique // opaque key in private storage
+  originalName       String
+  mimeType           String
+  sizeBytes          Int
+  checksumSha256     String
+  phase              String? // 'BEFORE' | 'AFTER' | null
+  capturedAt         DateTime?
+  createdAt          DateTime @default(now())
+
+  checklistResponse ChecklistResponse? @relation(fields: [checklistResponseId], references: [id])
+  repairAction      RepairAction?      @relation(fields: [repairActionId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("attachment")
+}
+
+model HealthObservation {
+  id              String       @id @default(uuid()) @db.Uuid
+  assetId         String?      @db.Uuid
+  externalAssetKey String?
+  sourceId        String?      @db.Uuid
+  importBatchId   String?      @db.Uuid
+  source          HealthSource
+  overallStatus   HealthStatus
+  componentKey    String?
+  componentStatus HealthStatus?
+  observedAt      DateTime
+  rawChecksum     String?
+  createdAt       DateTime     @default(now())
+
+  asset       Asset?             @relation(fields: [assetId], references: [id])
+  source_     IntegrationSource? @relation(fields: [sourceId], references: [id])
+  importBatch ImportBatch?     @relation(fields: [importBatchId], references: [id])
+
+  @@index([assetId])
+  @@index([observedAt])
+  @@map("health_observation")
+}
+
+/// Immutable computed readiness result + reasons (append-only). One row per
+/// transition (doc 01/08). Never updated or deleted.
+model ReadinessSnapshot {
+  id         String          @id @default(uuid()) @db.Uuid
+  assetId    String          @db.Uuid
+  status     ReadinessStatus
+  reasons    Json // ReadinessReason[] from the domain engine
+  trigger    ReadinessTrigger
+  computedAt DateTime        @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  @@index([assetId, computedAt])
+  @@map("readiness_snapshot")
+}
+
+// ─────────────────────────────────────────── Notification / Integration ─────
+
+model Notification {
+  id             String              @id @default(uuid()) @db.Uuid
+  recipientId    String?             @db.Uuid
+  channel        NotificationChannel
+  type           String // 'ASSET_DOWN' | 'REPAIR_REJECTED' | 'SYNC_FAILED' | ...
+  subject        String
+  body           String
+  status         NotificationStatus  @default(PENDING)
+  idempotencyKey String              @unique
+  attempts       Int                 @default(0)
+  lastError      String?
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  recipient User? @relation(fields: [recipientId], references: [id])
+
+  @@index([status])
+  @@map("notification")
+}
+
+model IntegrationSource {
+  id          String    @id @default(uuid()) @db.Uuid
+  key         String    @unique
+  name        String
+  kind        String // 'MANUAL' | 'CSV' | 'SNMP' | 'API'
+  config      Json?
+  active      Boolean   @default(true)
+  retiredAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  importBatches      ImportBatch[]
+  healthObservations HealthObservation[]
+
+  @@map("integration_source")
+}
+
+model ImportBatch {
+  id            String       @id @default(uuid()) @db.Uuid
+  sourceId      String?      @db.Uuid
+  kind          String // 'ASSET_REGISTRY' | 'HEALTH_OBSERVATION'
+  fileName      String
+  fileChecksum  String
+  status        ImportStatus @default(UPLOADED)
+  totalRows     Int          @default(0)
+  validRows     Int          @default(0)
+  errorRows     Int          @default(0)
+  rowErrors     Json? // [{ row, field, message }]
+  actorId       String?      @db.Uuid
+  committedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  source             IntegrationSource?  @relation(fields: [sourceId], references: [id])
+  healthObservations HealthObservation[]
+
+  @@map("import_batch")
+}
+
+/// Append-only audit trail. No secrets/tokens/PII payloads.
+model AuditEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  actorName  String?
+  action     String // 'LOGIN' | 'ROLE_CHANGE' | 'WORKORDER_CLOSE' | ...
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  device     String?
+  occurredAt DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([occurredAt])
+  @@map("audit_event")
+}

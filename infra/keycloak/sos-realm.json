@@ -1,0 +1,36 @@
+{
+  "realm": "sos",
+  "enabled": true,
+  "displayName": "ระบบซ่อมบำรุงเสา SOS",
+  "loginWithEmailAllowed": false,
+  "sslRequired": "external",
+  "roles": {
+    "realm": [
+      { "name": "SYSTEM_ADMIN", "description": "ผู้ดูแลระบบ" },
+      { "name": "PLANNER", "description": "ผู้วางแผน/ผู้ควบคุมงาน" },
+      { "name": "TECHNICIAN", "description": "เจ้าหน้าที่ภาคสนาม" },
+      { "name": "EXECUTIVE", "description": "ผู้บริหาร/ผู้ตรวจสอบ (อ่านอย่างเดียว)" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "sos-web",
+      "name": "SOS Web (Next.js)",
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "secret": "dev-only-not-a-secret-rotate-in-prod",
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"]
+    }
+  ],
+  "requiredActions": [
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "enabled": true,
+      "defaultAction": true
+    }
+  ]
+}

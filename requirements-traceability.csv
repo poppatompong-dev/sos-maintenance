@@ -1,0 +1,26 @@
+requirement_id,area,requirement,design_ref,implementation_ref,test_ref,evidence,status
+RDY-01,Readiness,Status computed from evidence (no user-picked colour),docs/adr/0003-readiness-engine.md,src/domain/readiness/engine.ts,src/domain/readiness/engine.test.ts,17 unit tests pass,DONE
+RDY-02,Readiness,Precedence DOWN>UNKNOWN>WATCH>READY,doc 01/08,src/domain/readiness/engine.ts,src/domain/readiness/engine.test.ts,"tests: DOWN wins over missing baseline & overdue",DONE
+RDY-03,Readiness,7-day grace boundary (WATCH within / UNKNOWN beyond),doc 01/07,src/domain/readiness/engine.ts,src/domain/readiness/engine.test.ts,grace-boundary test (7d inclusive),DONE
+RDY-04,Readiness,Every transition => immutable ReadinessSnapshot + reasons,docs/adr/0003-readiness-engine.md,prisma/schema.prisma (ReadinessSnapshot),,schema append-only model,PARTIAL
+RDY-05,Readiness,Critical function set (SOS button/audio/camera/network/power),doc 08,src/domain/readiness/critical-functions.ts,,,DONE
+ASSET-01,Asset,Registry EP01-EP27 with coords/QR/components/survey,doc 08,prisma/seed.ts + prisma/seed-data/sos-poles.ts,prisma/seed-data/sos-poles.test.ts,"27-pole integrity test; seed pending DB run",PARTIAL
+ASSET-02,Asset,Generic AssetType core (not SOS-hardcoded),docs/adr/0001-modular-monolith.md,prisma/schema.prisma (AssetType/Asset),,schema validated,DONE
+ASSET-03,Asset,PostGIS geography SRID4326 + server-side distance,doc 04,prisma/sql/001_enable_postgis.sql,,generated geog column + GiST index,PARTIAL
+ASSET-04,Asset,Soft-retire referenced master data,doc 05,prisma/schema.prisma (retiredAt),,schema,DONE
+PM-01,Maintenance,Versioned checklist templates (immutable when used),doc 08,prisma/schema.prisma (ChecklistTemplateVersion.isLocked),,schema,PARTIAL
+PM-02,Maintenance,4 checklist types (weekly/monthly/semiannual/corrective)+survey,doc 08,prisma/seed.ts (CHECKLISTS),,seed defines 5 templates,PARTIAL
+PM-03,Maintenance,Maintenance plans with recurrence,doc 08,prisma/schema.prisma (MaintenancePlan) + seed,,schema+seed,PARTIAL
+WO-01,Work,Work order state machine + REJECTED/REOPENED/CANCELLED,doc 04,prisma/schema.prisma (WorkOrderStatus),,enum+model,PARTIAL
+WO-02,Work,Critical fail => Fault + Corrective WO (idempotent),doc 04/08,prisma/schema.prisma (Fault.correctiveWorkOrder unique),,fault<->WO 1:1,PARTIAL
+OFF-01,Offline,Idempotent mutation envelopes; no silent last-write-wins,docs/adr/0004-offline-sync.md,prisma/schema.prisma (clientMutationId+version),,schema,PARTIAL
+OFF-02,Offline,GPS >100m => reason + review flag,doc 04,prisma/schema.prisma (ChecklistResponse.locationException),,schema fields,PARTIAL
+RPT-01,Report,Dashboard/PDF/Excel share one metric definition,docs/adr/0008-reporting.md,,,,TODO
+RPT-02,Report,Thai PDF + Excel + พ.ศ. display / UTC storage,doc 08,,,,TODO
+SEC-01,Security,Server-side RBAC on every endpoint & object,docs/adr/0002-identity-keycloak.md,,,,TODO
+SEC-02,Security,Keycloak OIDC + TOTP MFA,docs/adr/0002-identity-keycloak.md,infra/keycloak/sos-realm.json,,realm (roles+client+CONFIGURE_TOTP),PARTIAL
+SEC-03,Security,Private file storage + authorized download,docs/adr/0005-storage.md,prisma/schema.prisma (Attachment),,schema,PARTIAL
+OPS-01,Ops,Daily backup RPO<=24h + tested restore,docs/adr/0010-backup-restore.md,infra/backup.sh + docker-compose.prod.yml,,backup service+script,PARTIAL
+OPS-02,Ops,Reproducible deploy (Docker Compose + Caddy TLS),docs/adr/0001-modular-monolith.md,docker-compose*.yml + infra/,,compose+Dockerfiles+Caddyfile,PARTIAL
+OPS-03,Ops,Background jobs with persistent state,docs/adr/0006-jobs-outbox.md,src/worker/main.ts,,worker scaffold,PARTIAL
+OPS-04,Ops,No paid core dependency (license inventory),doc 08,docs/LICENSE_INVENTORY.md,,pnpm licenses list,PARTIAL

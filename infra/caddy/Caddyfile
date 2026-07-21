@@ -1,0 +1,21 @@
+# Caddy edge: automatic HTTPS + security headers + reverse proxy (doc 03/05).
+{$APP_DOMAIN} {
+	encode gzip zstd
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# CSP is intentionally strict; map tiles come from the configured OSM host.
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		-Server
+	}
+
+	# Keycloak realm endpoints proxied under /auth (optional; can be its own host).
+	handle_path /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
+	reverse_proxy app:3000
+}
