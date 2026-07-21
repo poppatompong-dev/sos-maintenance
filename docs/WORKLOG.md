@@ -25,10 +25,19 @@ Plan / order:
    6.2:1, status chip 5.5:1, brand button 5.5:1), no console errors. Prototype QA
    findings (button-name, colour-contrast) resolved.
 
+3. ✅ Technician B mobile "today" shell (`src/app/today/page.tsx`) — top bar, solid
+   hero (no gradient), Thai weekday+พ.ศ. date, QR-scan CTA (≥48px), empty-state
+   jobs, bottom nav. `SyncState` client component reflects real online/offline.
+5. ✅ PWA — `app/manifest.ts` (installable, start_url `/today`), placeholder icon
+   (`public/icon.svg`, NOT the official logo — pending), conservative prod-only
+   service worker (`public/sw.js`, network-first navigation + `/offline` fallback),
+   `ServiceWorkerRegister`. Verified: manifest.webmanifest, icon.svg, sw.js,
+   /offline all serve 200 with correct content types.
+
 Font: `IBM Plex Sans Thai` self-hosted via next/font (free/OSS). Home route `/` is
 `force-dynamic`; data source is temporary (seed registry) until Sprint 4 DB wiring.
 
-_Next: Technician B shell._
+_Next: CSV import validation (pure, testable) → then Sprint 4 DB wiring (Docker)._
 
 ---
 

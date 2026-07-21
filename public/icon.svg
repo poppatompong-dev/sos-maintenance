@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SOS Care placeholder icon">
+  <!-- Placeholder mark (NOT the official municipal logo — pending, doc 07).
+       Maskable-safe: content within the central 80% safe zone. -->
+  <rect width="512" height="512" rx="96" fill="#0b1930"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#5fd0b4" stroke-width="20"/>
+  <text x="256" y="238" text-anchor="middle" font-family="'IBM Plex Sans Thai','Noto Sans Thai',sans-serif" font-size="120" font-weight="700" fill="#ffffff">นว</text>
+  <text x="256" y="326" text-anchor="middle" font-family="Arial,sans-serif" font-size="56" font-weight="700" letter-spacing="6" fill="#5fd0b4">SOS</text>
+</svg>
