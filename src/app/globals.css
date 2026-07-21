@@ -1,26 +1,80 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/*
+ * SOS control-centre design tokens (see docs/DESIGN.md).
+ * Product register: restrained, one Thai type family, semantic status vocabulary.
+ * Status colours are committed brand identity (spec/prototype) — preserved, with
+ * text tones darkened to clear WCAG AA (>=4.5:1). Light theme, committed on
+ * purpose: operators work indoors at desktops monitoring status during the day.
+ */
+@theme {
+  --color-bg: #eef1f4;
+  --color-surface: #ffffff;
+  --color-panel: #f7f9fb;
+  --color-border: #e0e5ea;
+  --color-border-strong: #cbd3db;
+  --color-ink: #16202c;
+  --color-muted: #55636f;
+
+  --color-sidebar: #0b1930;
+  --color-sidebar-ink: #b6c3d3;
+  --color-sidebar-active: #15304a;
+  --color-sidebar-accent: #5fd0b4;
+
+  --color-brand: #0f766e;
+  --color-brand-strong: #0b5b55;
+
+  /* status: solid (indicators/pins) · ink (text on tint) · tint (chip bg) */
+  --color-ready: #12855f;
+  --color-ready-ink: #096b4b;
+  --color-ready-tint: #ddf3eb;
+  --color-watch: #bd7a10;
+  --color-watch-ink: #855200;
+  --color-watch-tint: #fbeed2;
+  --color-down: #cf3a3a;
+  --color-down-ink: #ae2222;
+  --color-down-tint: #fbe3e3;
+  --color-unknown: #6b7684;
+  --color-unknown-ink: #54606e;
+  --color-unknown-tint: #eaeef1;
+
+  --font-sans: var(--font-ibm-plex-thai), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 0.875rem;
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  min-width: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Visible keyboard focus everywhere (WCAG 2.2 AA). */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-brand) 22%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

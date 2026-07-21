@@ -11,14 +11,24 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 today) wired to the domain, verifiable via build + browser without Docker.
 
 Plan / order:
-1. Design tokens + globals + status components (StatusChip, status rail)
-2. Dashboard A shell rendering the *true* initial readiness state (all 27 poles
-   are UNKNOWN until an Initial Survey is approved — computed via the readiness
-   engine, not faked)
-3. Technician B mobile "today" shell
-4. Build + browser screenshot verification
+1. ✅ Design tokens + globals + status components (`src/app/globals.css`,
+   `StatusBadge`, `StatusRail`, `AppRail`, `PoleTable`, icons). See `docs/DESIGN.md`.
+2. ✅ Dashboard A shell (`src/app/page.tsx`) — control-centre: nav rail + header +
+   continuous status rail + pole card with the accessible table (map fallback) +
+   action ledger. Renders the *true* initial state: all 27 poles UNKNOWN, computed
+   by the readiness engine (not faked) — a teaching first-run state.
+3. 🚧 Technician B mobile "today" shell
+4. Verify: `pnpm build` ✓. Browser-verified via read_page (a11y tree) + JS probe
+   (screenshots time out in this pane; a11y tree is the reliable check):
+   IBM Plex Sans Thai applied, `lang=th`, 27 rows, status-bar aria-label correct,
+   Thai พ.ศ. timestamp working, **WCAG AA contrast measured** (ink 14.5:1, muted
+   6.2:1, status chip 5.5:1, brand button 5.5:1), no console errors. Prototype QA
+   findings (button-name, colour-contrast) resolved.
 
-_Live status: see task list / latest commits. Updated as each increment lands._
+Font: `IBM Plex Sans Thai` self-hosted via next/font (free/OSS). Home route `/` is
+`force-dynamic`; data source is temporary (seed registry) until Sprint 4 DB wiring.
+
+_Next: Technician B shell._
 
 ---
 
