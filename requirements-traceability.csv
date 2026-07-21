@@ -12,12 +12,15 @@ PM-01,Maintenance,Versioned checklist templates (immutable when used),doc 08,pri
 PM-02,Maintenance,4 checklist types (weekly/monthly/semiannual/corrective)+survey,doc 08,prisma/seed.ts (CHECKLISTS),,seed defines 5 templates,PARTIAL
 PM-03,Maintenance,Maintenance plans with recurrence,doc 08,prisma/schema.prisma (MaintenancePlan) + seed,,schema+seed,PARTIAL
 WO-01,Work,Work order state machine + REJECTED/REOPENED/CANCELLED,doc 04,prisma/schema.prisma (WorkOrderStatus),,enum+model,PARTIAL
-WO-02,Work,Critical fail => Fault + Corrective WO (idempotent),doc 04/08,prisma/schema.prisma (Fault.correctiveWorkOrder unique),,fault<->WO 1:1,PARTIAL
-OFF-01,Offline,Idempotent mutation envelopes; no silent last-write-wins,docs/adr/0004-offline-sync.md,prisma/schema.prisma (clientMutationId+version),,schema,PARTIAL
-OFF-02,Offline,GPS >100m => reason + review flag,doc 04,prisma/schema.prisma (ChecklistResponse.locationException),,schema fields,PARTIAL
-RPT-01,Report,Dashboard/PDF/Excel share one metric definition,docs/adr/0008-reporting.md,,,,TODO
-RPT-02,Report,Thai PDF + Excel + พ.ศ. display / UTC storage,doc 08,,,,TODO
-SEC-01,Security,Server-side RBAC on every endpoint & object,docs/adr/0002-identity-keycloak.md,,,,TODO
+WO-01,Work,Work order state machine + REJECTED/REOPENED/CANCELLED,doc 04,src/domain/work/state-machine.ts,src/domain/work/state-machine.test.ts,17 tests (transitions),DONE
+WO-02,Work,Critical fail => Fault + Corrective WO (idempotent),doc 04/08,src/domain/fault/index.ts,src/domain/fault/fault.test.ts,deterministic keys; 6 tests,DONE
+WO-03,Work,Separation of duties (no self-accept of repair),doc 08,src/domain/work/state-machine.ts,src/domain/work/state-machine.test.ts,SoD tests,DONE
+PM-04,Maintenance,Recurrence weekly/monthly/semiannual + Bangkok TZ + holidays,doc 06,src/domain/recurrence/index.ts,src/domain/recurrence/recurrence.test.ts,15 tests (clamp+working-day),DONE
+OFF-01,Offline,Idempotent mutation envelopes; no silent last-write-wins,docs/adr/0004-offline-sync.md,src/domain/sync/envelope.ts + src/server/services/submit-inspection.ts,src/domain/sync/envelope.test.ts + submit-inspection.test.ts,dedup + conflict tests,PARTIAL
+OFF-02,Offline,GPS >100m => reason + review flag,doc 04,src/domain/geo/index.ts,src/domain/geo/geo.test.ts,8 tests incl. boundary,DONE
+RPT-01,Report,Dashboard/PDF/Excel share one metric definition,docs/adr/0008-reporting.md,src/domain/metrics/index.ts,src/domain/metrics/metrics.test.ts,MTTA/MTTR/rollup; 9 tests,PARTIAL
+RPT-02,Report,Thai PDF + Excel + พ.ศ. display / UTC storage,doc 08,src/domain/shared/thai-date.ts,src/domain/shared/thai-date.test.ts,พ.ศ./Bangkok tests,PARTIAL
+SEC-01,Security,Server-side RBAC on every endpoint & object,docs/adr/0002-identity-keycloak.md,src/domain/authz/policy.ts + submit-inspection.ts (assertCan),src/domain/authz/policy.test.ts,role matrix tests,PARTIAL
 SEC-02,Security,Keycloak OIDC + TOTP MFA,docs/adr/0002-identity-keycloak.md,infra/keycloak/sos-realm.json,,realm (roles+client+CONFIGURE_TOTP),PARTIAL
 SEC-03,Security,Private file storage + authorized download,docs/adr/0005-storage.md,prisma/schema.prisma (Attachment),,schema,PARTIAL
 OPS-01,Ops,Daily backup RPO<=24h + tested restore,docs/adr/0010-backup-restore.md,infra/backup.sh + docker-compose.prod.yml,,backup service+script,PARTIAL
