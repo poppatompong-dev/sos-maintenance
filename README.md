@@ -4,8 +4,10 @@
 ช่วยเหลือฉุกเฉิน (SOS) 27 จุด (EP01–EP27) ตอบได้ทันทีว่าเสาใด **พร้อมใช้ / เฝ้าระวัง /
 ใช้งานไม่ได้ / ยังไม่ทราบ** พร้อมสืบย้อนกลับถึงหลักฐาน
 
-> Requirements & decisions live in the project's `docs/` handoff pack (01–09).
-> Source-of-truth order: doc 07 (latest decision) > 01/06 > 03–05 > 08 > prototype.
+> **New here or resuming?** Read [`docs/RESUME_HERE.md`](docs/RESUME_HERE.md) first,
+> then [`docs/WORKLOG.md`](docs/WORKLOG.md) for history and [`docs/DESIGN.md`](docs/DESIGN.md)
+> for the UI system. Requirements & decisions live in the `docs/spec/` handoff pack (01–09);
+> source-of-truth order: doc 07 (latest decision) > 01/06 > 03–05 > 08 > prototype.
 
 ## Stack (free / open-source core — no paid dependency)
 Next.js (App Router) + TypeScript · PostgreSQL + PostGIS (Prisma) · Keycloak

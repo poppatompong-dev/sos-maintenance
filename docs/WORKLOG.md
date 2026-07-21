@@ -37,7 +37,16 @@ Plan / order:
 Font: `IBM Plex Sans Thai` self-hosted via next/font (free/OSS). Home route `/` is
 `force-dynamic`; data source is temporary (seed registry) until Sprint 4 DB wiring.
 
-_Next: CSV import validation (pure, testable) → then Sprint 4 DB wiring (Docker)._
+**Also added this session (pure domain, tested):**
+- `src/domain/import` — CSV parser + asset-registry & health-observation row
+  validation; `canCommit` only when zero errors (no silent partial overwrite). 11 tests.
+- `src/domain/notification` — Thai message builders for ASSET_DOWN / REPAIR_REJECTED
+  / SYNC_FAILED / IMPORT_FAILED with deterministic idempotency keys. 6 tests.
+
+**End-of-session state:** 129 tests green; typecheck + lint + build clean; 11 commits
+pushed. Sprint 1–3 complete.
+
+_Next: Sprint 4 — DB wiring (needs Docker). See RESUME_HERE.md._
 
 ---
 
