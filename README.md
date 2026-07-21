@@ -4,11 +4,12 @@
 ช่วยเหลือฉุกเฉิน (SOS) 27 จุด (EP01–EP27) ตอบได้ทันทีว่าเสาใด **พร้อมใช้ / เฝ้าระวัง /
 ใช้งานไม่ได้ / ยังไม่ทราบ** พร้อมสืบย้อนกลับถึงหลักฐาน
 
-> **Continuing from another machine?** See [`docs/START_TOMORROW.md`](docs/START_TOMORROW.md).
-> **New here or resuming?** Read [`docs/RESUME_HERE.md`](docs/RESUME_HERE.md) first,
-> then [`docs/WORKLOG.md`](docs/WORKLOG.md) for history and [`docs/DESIGN.md`](docs/DESIGN.md)
-> for the UI system. Requirements & decisions live in the `docs/spec/` handoff pack (01–09);
-> source-of-truth order: doc 07 (latest decision) > 01/06 > 03–05 > 08 > prototype.
+> **Docs:** start at the [`docs/` index](docs/README.md) →
+> [`RESUME_HERE`](docs/RESUME_HERE.md) (current state + next steps),
+> [`ARCHITECTURE`](docs/ARCHITECTURE.md) (how the code fits together),
+> [`START_TOMORROW`](docs/START_TOMORROW.md) (continue from another machine, with
+> ready-to-use prompts). Requirements live in [`docs/spec/`](docs/spec)
+> (source-of-truth order: 07 > 01/06 > 03–05 > 08 > prototype).
 
 ## Stack (free / open-source core — no paid dependency)
 Next.js (App Router) + TypeScript · PostgreSQL + PostGIS (Prisma) · Keycloak
@@ -76,5 +77,16 @@ integration/E2E come online in later sprints (see `.github/workflows/ci.yml`).
 committed) and: `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d`.
 
 ## Status
-Sprint 1 (Foundation) — see `requirements-traceability.csv`. Not production-ready
-until the delivery gate in `docs/06_DELIVERY_QA_UAT.md` is met.
+
+| Area | State |
+|---|---|
+| Domain logic — readiness, recurrence, geo/GPS, work state machine, fault, metrics, RBAC, offline sync, import, notifications | ✅ done · **129 tests** |
+| Data model — Prisma schema (20+ entities), 27-pole seed, PostGIS | ✅ schema+seed · ⏳ migration run needs Docker |
+| UI — control-centre Dashboard (A), Technician field shell (B), installable PWA | ✅ done · browser-verified (a11y + WCAG AA) |
+| DB wiring — Prisma repositories behind the service ports, migrations | ⏳ Sprint 4 (needs Docker) |
+| Auth — Keycloak OIDC/MFA + per-route RBAC enforcement | ⏳ Sprint 5 (policy done + tested) |
+| REST API routes · offline IndexedDB sync · reports (PDF/Excel) · MapLibre map | ⏳ later sprints |
+
+`pnpm test` → 129 passing; `typecheck` / `lint` / `build` green. Not production-ready
+until the delivery gate in [`docs/spec/06_DELIVERY_QA_UAT.md`](docs/spec/06_DELIVERY_QA_UAT.md)
+is met. Progress detail in [`requirements-traceability.csv`](requirements-traceability.csv).
