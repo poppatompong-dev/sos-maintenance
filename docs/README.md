@@ -8,6 +8,7 @@ state and the next step. This page maps everything else.
 |---|---|
 | [RESUME_HERE.md](RESUME_HERE.md) | ▶ Current state, how to run, ordered next steps. Read first. |
 | [START_TOMORROW.md](START_TOMORROW.md) | Continue from **another machine**; ready-to-use prompts for each next task. |
+| [PORTABLE_USB.md](PORTABLE_USB.md) | Copy the whole project to a **flash drive** and work offline (no git needed). |
 | [WORKLOG.md](WORKLOG.md) | Chronological history + why each decision was made. |
 | [DEVELOPING.md](DEVELOPING.md) | Multi-machine workflow (git as source of truth, daily habit). |
 
