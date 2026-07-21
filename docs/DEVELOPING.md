@@ -26,8 +26,8 @@ Because the dev database is just seeded reference data, it is **rebuilt from
 
 ## Setting up a NEW machine (e.g. the work PC tomorrow)
 ```powershell
-# 1. Get the code (clone once; the URL is printed after the first push)
-git clone https://github.com/<owner>/sos-maintenance.git C:\dev\sos-maintenance
+# 1. Get the code (clone once). Sign in to gh first if needed: gh auth login
+git clone https://github.com/poppatompong-dev/sos-maintenance.git C:\dev\sos-maintenance
 cd C:\dev\sos-maintenance
 
 # 2. One-shot bootstrap: checks tools, installs deps, creates .env
