@@ -5,6 +5,18 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-22 — Roadmap checkpoint and production blocker audit
+
+Added [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md) as the single progress
+view for the project. It records milestone status, runtime evidence, owners,
+critical-path work, and the Definition of Done for production. The checkpoint
+corrects the current evidence boundary: database and authorized cron are
+working, while the production readiness and technician APIs still return 401
+because live Keycloak configuration is not present; the UI shell also contains
+unfinished workflow actions. Production must not use `AUTH_DEV_BYPASS=true`.
+
+---
+
 ## 2026-07-22 — Verification follow-up: worker and schedule/batch gates
 
 **Delivered in the working tree:** notification claiming now uses a compare-and-

@@ -7,6 +7,7 @@ state and the next step. This page maps everything else.
 | Doc | What it's for |
 |---|---|
 | [RESUME_HERE.md](RESUME_HERE.md) | ▶ Current state, how to run, ordered next steps. Read first. |
+| [ROADMAP_CHECKPOINT.md](ROADMAP_CHECKPOINT.md) | สถานะ milestone, หลักฐาน runtime, blocker และงานถัดไปแบบดูได้ทันที |
 | [START_TOMORROW.md](START_TOMORROW.md) | Continue from **another machine**; ready-to-use prompts for each next task. |
 | [PORTABLE_USB.md](PORTABLE_USB.md) | Copy the whole project to a **flash drive** and work offline (no git needed). |
 | [WORKLOG.md](WORKLOG.md) | Chronological history + why each decision was made. |

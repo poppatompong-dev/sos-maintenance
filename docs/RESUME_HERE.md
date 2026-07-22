@@ -5,7 +5,9 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-22 (Sprint 4–6 wiring session)._
+_Last updated: 2026-07-22 (production verification and roadmap checkpoint)._
+
+**ดูสถานะ milestone และหลักฐานล่าสุด:** [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md)
 
 ## Where we are
 - **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ — implementation is in the working tree and the DB-backed integration gate is green.
@@ -41,17 +43,12 @@ creator rejection, and concurrent work-order code allocation. Do not commit the
 connection string; keep it in deployment/local secret configuration only.
 
 ## Next steps (in order)
-1. **Release review:** review the complete working tree, update the CI/protected
-   path as required, then create the controlled commit and push to `main`.
-2. **Auth e2e:** run the real self-hosted Keycloak OIDC + TOTP flow (the accepted
-   ADR 0002 choice) with live issuer/JWKS; server-side RBAC/object authorization
-   remains mandatory.
-3. **Vercel gate:** configure `DATABASE_URL`, `CRON_SECRET`, and the production
-   deployment, then verify the deployed cron endpoint and smoke test.
-4. **Security:** rotate the Neon password/connection secret before production,
-   because the credential was exposed during setup communication.
-5. **Later product depth:** reports, online MapLibre map (accessible list fallback
-   already built), and remaining doc 08 interfaces.
+1. **Auth blocker:** provide a public Keycloak issuer, client ID, client secret (if confidential), and production redirect URL; never enable `AUTH_DEV_BYPASS=true`.
+2. **Auth e2e:** run OIDC + TOTP login and verify authenticated API/RBAC/object authorization.
+3. **Workflow completion:** connect the `/today` and dashboard shell actions to real inspection, sync, fault, and work-order flows.
+4. **Security:** rotate the Neon password/connection secret before production, because the credential was exposed during setup communication.
+5. **Release gate:** redeploy, run runtime smoke tests, then complete `docs/spec/06_DELIVERY_QA_UAT.md`.
+6. **Later product depth:** reports, online MapLibre map (accessible list fallback already built), and remaining doc 08 interfaces.
 
 ## Map of the code
 - `src/domain/**` — pure business logic (readiness, recurrence, geo, work state
