@@ -17,6 +17,7 @@ export interface SyncChecklistItem {
 }
 
 export interface SyncWorkOrder {
+  id: string;
   code: string;
   kind: string;
   status: string;
@@ -45,6 +46,7 @@ export async function getSyncBootstrap(
     },
     orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }],
     select: {
+      id: true,
       code: true,
       kind: true,
       status: true,
@@ -72,6 +74,7 @@ export async function getSyncBootstrap(
   return {
     generatedAt: now,
     workOrders: rows.map((w) => ({
+      id: w.id,
       code: w.code,
       kind: w.kind,
       status: w.status,

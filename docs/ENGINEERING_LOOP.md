@@ -66,11 +66,24 @@ NEXT SLICE
 | ลำดับ | Slice | Acceptance criteria | สถานะ |
 |---:|---|---|---|
 | 1 | Internal no-login mode | production API no Authorization → 200; validation ยังทำงาน | DONE |
-| 2 | Workflow UI `/today` | เริ่มงาน/ส่งผลตรวจ/sync ทำงานจริงบน browser | NEXT |
+| 2 | Workflow UI `/today` | bootstrap มี work-order id; online เริ่มงาน/ส่งผลตรวจ/refresh sync ทำงานจริง | IN PROGRESS |
 | 3 | Dashboard actions | dashboard เรียกข้อมูล DB และเปิดรายละเอียด/งานได้จริง | NEXT |
 | 4 | Post-change DB integration | integration suite ผ่านหลัง internal-mode change | PENDING |
 | 5 | Security boundary | Vercel URL จำกัดเครือข่าย หรือบันทึก owner-approved exception | OPEN |
 | 6 | UAT/review | QA/UAT, rollback และ review ผ่านก่อนประกาศ complete | BLOCKED UNTIL 2–5 |
+
+### Current slice review — 2026-07-22
+
+**REVIEW: CONDITIONAL PASS** สำหรับ Workflow UI `/today` ก่อน production smoke
+
+- เพิ่ม `TodayWorkspace` ให้โหลด bootstrap, แสดงใบงานจริง, เริ่มงานผ่าน state
+  machine, อ่าน GPS, ส่ง checklist envelope พร้อม SHA-256 และเปลี่ยนเป็น `SUBMITTED`
+- ใช้ `mutationId` เดิมเมื่อ retry หลัง evidence write สำเร็จแต่ transition ยังไม่ผ่าน
+  จึงไม่สร้าง checklist evidence ซ้ำจากการกดซ้ำโดยไม่ตั้งใจ
+- ยังไม่ปิด slice: browser smoke หลัง deployment ต้องยืนยันกับ fixture จริง และ
+  `pnpm test:integration` ต้องรันบนเครื่องที่มี `DATABASE_URL`
+- ขอบเขตที่ยังไม่ทำใน slice นี้: QR scan, IndexedDB offline mutation queue,
+  photo attachment และ dashboard actions
 
 ## Review checklist ก่อนเปลี่ยนเป็น DONE
 

@@ -19,7 +19,8 @@
 และ deployment ต้องอยู่หลัง network boundary ภายใน เพราะทุก request จะมีสิทธิ์เต็ม
 
 `AUTH_MODE=internal` เป็นโหมดที่ตั้งใจเปิดใช้ตามคำสั่งล่าสุด ไม่ใช่ dev bypass แต่ห้าม
-ใช้กับ URL ที่เปิดสาธารณะโดยไม่มี network restriction
+ใช้กับ URL ที่เปิดสาธารณะโดยไม่มี network restriction งาน `/today` เริ่มเชื่อมกับ
+bootstrap และ workflow API แล้ว แต่ยังต้องทำ production browser smoke ก่อนปิด milestone
 
 ## Checkpoint ตาม milestone
 
@@ -27,7 +28,7 @@
 |---|---|---|---|
 | Sprint 1 — Foundation | DONE | Next.js, Prisma schema, PostGIS, seed 27 จุด, CI และ ADR อยู่ใน repo | ไม่มีงานค้างในขอบเขต sprint |
 | Sprint 2 — Domain layer | DONE | readiness, RBAC, work state machine, GPS, sync และ metrics มี unit tests | กฎธุรกิจต้องคง pure และมี tests |
-| Sprint 3 — UI/PWA shell | PARTIAL | `/`, `/today`, `/offline` ตอบ 200; manifest/service worker ใช้งานได้ | ปุ่มและ navigation ต้องเชื่อม workflow จริง |
+| Sprint 3 — UI/PWA shell | IN PROGRESS | `/`, `/today`, `/offline` ตอบ 200; `/today` มี client workflow ต่อ bootstrap/start/submit แล้ว | production browser/a11y smoke และ offline queue ยังต้องตรวจ |
 | Sprint 4 — DB wiring | DONE | Neon migration, PostGIS, seed และ Prisma adapter ผ่าน | integration suite ต้องผ่าน |
 | Sprint 5 — Auth/RBAC | DEFERRED | owner เลือก no-login internal mode; Keycloak ถูกพักไว้ | network boundary และ internal-mode smoke ผ่าน |
 | Sprint 6 — REST/API | PASS WITH SECURITY EXCEPTION | routes, integration evidence และ no-login production smoke ผ่าน | authenticated API gate replaced by internal-mode smoke; network boundary remains open |
@@ -61,7 +62,7 @@
 | 1 | ตั้ง `AUTH_MODE=internal` ใน Vercel Production | ทีม deploy | DONE; env เก่า `AUTH_DEV_BYPASS`/`AUTH_SECRET` ถูกนำออก |
 | 2 | ยืนยัน network boundary ของ URL ที่จะใช้งานภายใน | เจ้าของบัญชี + ทีม | OPEN SECURITY EXCEPTION; Vercel URL ยัง public |
 | 3 | ทดสอบ API/readiness/sync โดยไม่ login | ทีมพัฒนา | DONE; HTTP 200/400 และ response shape ผ่าน |
-| 4 | ต่อปุ่ม `/today`, dashboard actions และ navigation ให้เป็น workflow จริง | ทีมพัฒนา | browser smoke/UAT evidence |
+| 4 | ปิด Workflow UI `/today` และต่อ dashboard actions/navigation | ทีมพัฒนา | production browser smoke/UAT evidence; `/today` code slice อยู่ใน review |
 | 5 | หมุน Neon database credential ก่อน release | เจ้าของบัญชี + ทีม deploy | rotation timestamp และ redeploy result; ห้ามบันทึกค่า secret |
 | 6 | Redeploy และรัน QA/UAT gate | ทีมทั้งหมด | test totals, smoke results, known issues, rollback point |
 

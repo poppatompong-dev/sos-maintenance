@@ -12,6 +12,7 @@ _Last updated: 2026-07-22 (production verification and roadmap checkpoint)._
 ## Where we are
 - **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ — implementation is in the working tree and the DB-backed integration gate is green.
 - **Tests:** `pnpm test` → **167 passing**; the prior DB-backed integration gate was **41 passing** against Neon. After the internal-mode change, local integration rerun is pending because this machine has no `DATABASE_URL`. `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green.
+- **Current workflow slice:** `/today` now loads the real sync bootstrap, shows open field work orders, starts assigned work, captures GPS/checklist results, submits idempotent evidence, and advances the work order to `SUBMITTED`. Production browser smoke and post-change DB integration are still pending.
 - **Running app (no Docker needed):** `pnpm dev` → `/` control-centre dashboard, `/today` technician field shell (installable PWA).
 - **Repo:** https://github.com/poppatompong-dev/sos-maintenance (private, branch `main`).
 - **What works end-to-end today:** the whole domain (readiness, recurrence, geo,
@@ -44,7 +45,7 @@ connection string; keep it in deployment/local secret configuration only.
 
 ## Next steps (in order)
 1. **Internal mode:** deploy with `AUTH_MODE=internal`; no Keycloak/login is required by the current owner decision.
-2. **Workflow completion:** connect the `/today` and dashboard shell actions to real inspection, sync, fault, and work-order flows.
+2. **Workflow completion:** finish production smoke/UAT for the connected `/today` flow, then connect dashboard actions to real inspection, sync, fault, and work-order flows.
 3. **Security boundary:** restrict the deployment to the municipality's internal network or private access layer; a public Vercel URL is not sufficient.
 4. **Security:** rotate the Neon password/connection secret before production, because the credential was exposed during setup communication.
 5. **Release gate:** redeploy, run runtime smoke tests, then complete `docs/spec/06_DELIVERY_QA_UAT.md` with the internal-mode exception recorded.

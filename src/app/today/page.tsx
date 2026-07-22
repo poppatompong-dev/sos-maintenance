@@ -1,10 +1,10 @@
 import { SyncState } from '@/components/SyncState';
+import { TodayWorkspace } from '@/components/TodayWorkspace';
 import {
   ClipboardIcon,
   ListIcon,
   ScanIcon,
   BellIcon,
-  HelpCircleIcon,
 } from '@/components/icons';
 import { toBangkokParts } from '@/domain/shared/bangkok';
 import { formatThaiDate } from '@/domain/shared/thai-date';
@@ -58,7 +58,7 @@ export default function TodayPage() {
             <div>
               <p className="text-xs text-sidebar-ink">ตารางงานของคุณ</p>
               <h1 className="mt-1.5 text-xl font-bold">
-                วันนี้ยังไม่มีงานที่มอบหมาย
+                งานภาคสนามของคุณ
               </h1>
               <p className="mt-1.5 text-xs text-sidebar-ink">
                 {TH_WEEKDAYS[parts.weekday]}ที่ {formatThaiDate(now)}
@@ -74,28 +74,16 @@ export default function TodayPage() {
             </div>
           </div>
 
-          <button
-            type="button"
+          <a
+            href="#today-workspace"
             className="mt-5 flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl bg-sidebar-accent px-4 font-semibold text-[#052a25]"
           >
-            <ScanIcon size={22} />
-            สแกน QR เพื่อเริ่มงาน
-          </button>
+            <ListIcon size={22} />
+            ดูใบงานที่เปิดอยู่
+          </a>
         </section>
 
-        <section className="mt-6">
-          <h2 className="px-1 text-sm font-semibold text-ink">ลำดับงานวันนี้</h2>
-          <div className="mt-3 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-strong bg-surface px-6 py-10 text-center">
-            <span className="grid size-11 place-items-center rounded-full bg-unknown-tint text-unknown-ink">
-              <HelpCircleIcon size={22} />
-            </span>
-            <p className="font-semibold text-ink">ยังไม่มีงานที่มอบหมายวันนี้</p>
-            <p className="max-w-[34ch] text-xs leading-relaxed text-muted">
-              เมื่อผู้วางแผนมอบหมายและเผยแพร่งาน งานจะปรากฏที่นี่
-              พร้อมดาวน์โหลดไว้ทำงานแบบออฟไลน์
-            </p>
-          </div>
-        </section>
+        <TodayWorkspace />
       </main>
 
       <nav

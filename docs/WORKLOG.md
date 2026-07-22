@@ -5,6 +5,35 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-22 — Workflow UI `/today` slice implemented
+
+**FACT:** พบ root cause ว่า `GET /api/sync/bootstrap` ส่งเฉพาะ work-order code แต่
+`POST /api/inspections` ต้องใช้ database ID ทำให้ UI shell เดิมส่งผลตรวจจริงไม่ได้
+เพิ่ม `id` ใน bootstrap response และเพิ่ม `TodayWorkspace` ที่โหลดใบงานจริง,
+เริ่มงานผ่าน `IN_PROGRESS`, แสดง checklist, อ่าน GPS, ส่ง mutation envelope พร้อม
+SHA-256 และเปลี่ยนสถานะเป็น `SUBMITTED` หลัง evidence write สำเร็จ
+
+**DECISION:** สถานะ slice = **IN PROGRESS / CONDITIONAL PASS** จนกว่าจะมี production
+browser/a11y smoke กับ fixture ใบงานจริงและตรวจ integration หลัง change
+
+**EVIDENCE:** `pnpm test` 167/167, `pnpm typecheck`, `pnpm lint`, `pnpm build`
+ผ่าน; diff ตรวจด้วย `git diff --check` ผ่านก่อนรอบสุดท้าย. `pnpm test:integration`
+รันจริงแต่ติดที่เครื่องนี้ไม่มี `DATABASE_URL` ทำให้ 8 suites fail, 29 tests skip,
+4 tests ผ่านจาก 41 tests ที่ถูก discover — ไม่ใช่ code assertion failure
+
+**REVIEW:** retry ใช้ `mutationId` เดิมเพื่อรักษา idempotency; state transition ยัง
+ผ่าน server/domain rules. QR scan, IndexedDB offline queue, photo attachment,
+dashboard actions และ public-URL security boundary ยังไม่อยู่ใน slice นี้
+
+**NEXT:** commit/push แล้วรอ Vercel deployment, ตรวจ `/today` และ `/api/sync/bootstrap`
+บน production, จากนั้นรัน integration บน environment ที่มี database credential
+โดยไม่นำค่า secret เข้า log/chat
+
+**BLOCKER:** post-change integration ต้องการ `DATABASE_URL`; production ยังคงมี
+security exception เพราะ Vercel URL เป็น public และ internal mode ให้สิทธิ์เต็ม
+
+---
+
 ## 2026-07-22 — Roadmap checkpoint and production blocker audit
 
 Added [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md) as the single progress

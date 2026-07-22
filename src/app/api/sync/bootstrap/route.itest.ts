@@ -87,6 +87,7 @@ describe('GET /api/sync/bootstrap', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.workOrders).toHaveLength(1);
+    expect(body.workOrders[0].id).toBe(workOrderId);
     expect(body.workOrders[0].asset.code).toBe(`EPSB_${suffix}`);
     expect(body.workOrders[0].checklist).toHaveLength(2);
     expect(body.workOrders[0].checklist[0].code).toBe('sb_sos');
