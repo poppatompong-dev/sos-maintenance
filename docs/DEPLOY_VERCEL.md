@@ -65,11 +65,16 @@ requires a valid Keycloak `Authorization: Bearer <jwt>` and denies otherwise.
   `GET /api/readiness/overview` → 200 with the 27-pole rollup;
   without a token → 401.
 
-## 5. Not on Vercel (yet)
+## 5. Hobby cron limitation and not-on-Vercel components
+
+Vercel Hobby permits only one cron execution per day. The repository therefore
+uses `0 0 * * *` for `/api/jobs/tick` (midnight UTC / 07:00 Asia/Bangkok). An
+hourly schedule requires Vercel Pro or another scheduler such as GitHub Actions
+calling the same endpoint with `CRON_SECRET`.
 
 - **Background worker** (`pnpm worker`) — long-running; Vercel is serverless.
-  Options on free tiers: a **Vercel Cron** hitting a `/api/jobs/tick` route, or a
-  scheduled **GitHub Actions** workflow. Wire in a later sprint.
+  The daily Hobby cron is available now; use a scheduled **GitHub Actions**
+  workflow or Vercel Pro if hourly processing is required.
 - **Keycloak** — needs an always-on host (JVM + its own DB). Run it somewhere
   persistent (or a hosted IdP) and point `KEYCLOAK_ISSUER` at it.
 - **File storage** — local `var/uploads` in V1; move to S3-compatible for a
