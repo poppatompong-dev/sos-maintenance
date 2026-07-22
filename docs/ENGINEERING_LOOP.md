@@ -3,6 +3,28 @@
 แนวทางพัฒนาหลักของโปรเจคนี้คือ **sequential engineering loop** วนทีละ vertical
 slice ที่วัดผลได้ จนกว่าจะผ่านทั้ง code quality, runtime และ review
 
+## Installed loop skill
+
+ติดตั้งและนำ `codex-claude-loop` มาใช้เป็น operating procedure แล้วที่
+`C:\Users\poppa\.agents\skills\codex-claude-loop\SKILL.md`:
+
+- Claude Code รับผิดชอบวางแผนและลงมือใน slice ที่กำหนด
+- Codex ตรวจ plan, diff, quality gates, security impact และ runtime evidence
+- ทุก slice ต้องมี handoff, review verdict และ checkpoint ก่อนเริ่ม slice ถัดไป
+
+### Initial adoption review — 2026-07-22
+
+**REVIEW: CONDITIONAL PASS** สำหรับ commit `769370b` (internal no-login mode)
+
+- ผ่าน: production API แบบไม่ส่ง Authorization ตอบ 200, validation route ตอบ 400,
+  readiness ยังมาจาก DB, และ unit/typecheck/lint/build ผ่าน
+- เปิดความเสี่ยง: public Vercel URL ให้สิทธิ์ภายในเต็มรูปแบบตามการตัดสินใจใช้ระบบ
+  ภายในแบบไม่มี login ต้องจำกัด network หรือยอมรับ owner-approved exception
+- ค้างตรวจ: รัน `pnpm test:integration` หลังการเปลี่ยนโหมด โดยต้องมี
+  `DATABASE_URL` ใน environment ของเครื่องที่รัน
+- ยังไม่ใช่การประกาศ production complete: workflow UI, dashboard actions และ UAT
+  ยังอยู่ใน queue ด้านล่าง
+
 ## วงรอบมาตรฐาน
 
 ```text
