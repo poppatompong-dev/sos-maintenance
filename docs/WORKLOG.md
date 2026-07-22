@@ -45,6 +45,17 @@ rerun is pending because this machine has no `DATABASE_URL`.
 
 ---
 
+## 2026-07-22 — Adopted sequential engineering loop
+
+Added [`ENGINEERING_LOOP.md`](ENGINEERING_LOOP.md) as the shared development
+method. Every slice now requires a checkpoint, measurable acceptance criteria,
+current evidence, small implementation, quality gates, runtime smoke, self/team
+review, checkpoint update, and commit/push. The loop has explicit recovery rules
+to stop repeated retries and never mark work complete from build success alone.
+No additional skills were searched for or installed.
+
+---
+
 ## 2026-07-22 — Go-live handoff plan
 
 Added [`GO_LIVE_HANDOFF.md`](GO_LIVE_HANDOFF.md) for the owner's 30-minute

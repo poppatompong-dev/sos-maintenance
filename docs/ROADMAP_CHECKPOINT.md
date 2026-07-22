@@ -94,6 +94,9 @@
 แผนปฏิบัติการก่อนกลับบ้านและ handoff ให้ทีมอยู่ที่
 [`GO_LIVE_HANDOFF.md`](GO_LIVE_HANDOFF.md)
 
+แนวทาง loop engineer ที่ใช้กับทุก slice อยู่ที่
+[`ENGINEERING_LOOP.md`](ENGINEERING_LOOP.md)
+
 ## จุดอ้างอิงสำหรับผู้ช่วยคนถัดไป
 
 - เริ่มอ่านไฟล์นี้ก่อน แล้วอ่าน [`RESUME_HERE.md`](RESUME_HERE.md)
