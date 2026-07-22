@@ -43,12 +43,12 @@ creator rejection, and concurrent work-order code allocation. Do not commit the
 connection string; keep it in deployment/local secret configuration only.
 
 ## Next steps (in order)
-1. **Auth blocker:** provide a public Keycloak issuer, client ID, client secret (if confidential), and production redirect URL; never enable `AUTH_DEV_BYPASS=true`.
-2. **Auth e2e:** run OIDC + TOTP login and verify authenticated API/RBAC/object authorization.
-3. **Workflow completion:** connect the `/today` and dashboard shell actions to real inspection, sync, fault, and work-order flows.
+1. **Internal mode:** deploy with `AUTH_MODE=internal`; no Keycloak/login is required by the current owner decision.
+2. **Workflow completion:** connect the `/today` and dashboard shell actions to real inspection, sync, fault, and work-order flows.
+3. **Security boundary:** restrict the deployment to the municipality's internal network or private access layer; a public Vercel URL is not sufficient.
 4. **Security:** rotate the Neon password/connection secret before production, because the credential was exposed during setup communication.
-5. **Release gate:** redeploy, run runtime smoke tests, then complete `docs/spec/06_DELIVERY_QA_UAT.md`.
-6. **Later product depth:** reports, online MapLibre map (accessible list fallback already built), and remaining doc 08 interfaces.
+5. **Release gate:** redeploy, run runtime smoke tests, then complete `docs/spec/06_DELIVERY_QA_UAT.md` with the internal-mode exception recorded.
+6. **Later product depth:** reports, online MapLibre map (accessible list fallback already built), and optional Keycloak mode if policy changes.
 
 ## Map of the code
 - `src/domain/**` — pure business logic (readiness, recurrence, geo, work state

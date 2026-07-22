@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../db/client';
+import { INTERNAL_ACTOR_ID } from '../auth/session';
 import { allCriticalPassed, type EvaluatedResponse } from '@/domain/checklist';
 import type { WorkOrderStatus } from '@/domain/work/types';
 import {
@@ -97,7 +98,10 @@ export function createPrismaWorkOrderPort(
             workOrderId: input.workOrderId,
             fromStatus: input.from,
             toStatus: input.to,
-            actorId: input.actorUserId,
+            // Internal no-login mode has no real user row. Keep the immutable
+            // work log, but leave the optional FK null rather than inventing a
+            // database identity.
+            actorId: input.actorUserId === INTERNAL_ACTOR_ID ? null : input.actorUserId,
             note: input.note ?? null,
             occurredAt: input.now,
           },

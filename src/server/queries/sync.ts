@@ -34,14 +34,14 @@ export interface SyncBootstrap {
 const OFFLINE_WO_STATUSES = ['PUBLISHED', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED'] as const;
 
 export async function getSyncBootstrap(
-  userId: string,
+  userId: string | null,
   now: Date,
   client: PrismaClient = defaultPrisma,
 ): Promise<SyncBootstrap> {
   const rows = await client.workOrder.findMany({
     where: {
       status: { in: [...OFFLINE_WO_STATUSES] },
-      assignments: { some: { userId } },
+      ...(userId ? { assignments: { some: { userId } } } : {}),
     },
     orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }],
     select: {

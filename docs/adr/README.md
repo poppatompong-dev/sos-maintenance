@@ -15,3 +15,4 @@ and its consequences. Superseding decisions get a new ADR that links back.
 | [0008](0008-reporting.md) | Single metric service for dashboard/PDF/Excel | Accepted |
 | [0009](0009-audit-retention.md) | Append-only audit + lifetime+5y retention | Accepted |
 | [0010](0010-backup-restore.md) | Daily backup, tested restore as a release gate | Accepted |
+| [0011](0011-internal-no-login-mode.md) | Internal no-login deployment mode | Accepted for current deployment |

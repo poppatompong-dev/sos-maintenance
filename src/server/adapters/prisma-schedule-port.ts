@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../db/client';
+import { INTERNAL_ACTOR_ID } from '../auth/session';
 import { formatWorkOrderCode } from '@/domain/schedule';
 import {
   type CreateBatchPersistInput,
@@ -50,7 +51,7 @@ export function createPrismaSchedulePort(
             planId: input.planId,
             name: input.name,
             status: 'DRAFT',
-            createdById: input.createdById,
+            createdById: input.createdById === INTERNAL_ACTOR_ID ? null : input.createdById,
           },
           select: { id: true },
         });
@@ -105,7 +106,13 @@ export function createPrismaSchedulePort(
             status: input.to,
             version: { increment: 1 },
             ...(input.to === 'APPROVED'
-              ? { approvedAt: input.now, approverId: input.approverId ?? null }
+              ? {
+                  approvedAt: input.now,
+                  approverId:
+                    input.approverId === INTERNAL_ACTOR_ID
+                      ? null
+                      : input.approverId ?? null,
+                }
               : {}),
             ...(input.to === 'PUBLISHED' ? { publishedAt: input.now } : {}),
           },

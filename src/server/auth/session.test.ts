@@ -14,9 +14,24 @@ function reqWith(headers: Record<string, string>): Request {
 }
 
 const original = process.env.AUTH_DEV_BYPASS;
+const originalMode = process.env.AUTH_MODE;
 afterEach(() => {
   if (original === undefined) delete process.env.AUTH_DEV_BYPASS;
   else process.env.AUTH_DEV_BYPASS = original;
+  if (originalMode === undefined) delete process.env.AUTH_MODE;
+  else process.env.AUTH_MODE = originalMode;
+});
+
+describe('getSession (internal mode)', () => {
+  it('returns the stable internal operator without a login or token', async () => {
+    process.env.AUTH_MODE = 'internal';
+    delete process.env.AUTH_DEV_BYPASS;
+    expect(await getSession(reqWith({}))).toMatchObject({
+      userId: '00000000-0000-0000-0000-000000000001',
+      internal: true,
+      roles: ['SYSTEM_ADMIN', 'PLANNER', 'TECHNICIAN', 'EXECUTIVE'],
+    });
+  });
 });
 
 describe('getSession (dev bypass)', () => {

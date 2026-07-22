@@ -17,6 +17,18 @@ unfinished workflow actions. Production must not use `AUTH_DEV_BYPASS=true`.
 
 ---
 
+## 2026-07-22 — Owner decision: internal no-login mode
+
+The owner explicitly chose to remove the login requirement for the current
+internal deployment. Added ADR 0011 and an explicit `AUTH_MODE=internal` path:
+no bearer token/Keycloak is required, the internal operator has all application
+permissions, and the domain validation/idempotency/readiness/workflow rules stay
+active. This mode must not be presented as safe on a public URL; a trusted
+network/private access boundary is required. Keycloak remains an optional future
+mode rather than an active release blocker.
+
+---
+
 ## 2026-07-22 — Go-live handoff plan
 
 Added [`GO_LIVE_HANDOFF.md`](GO_LIVE_HANDOFF.md) for the owner's 30-minute

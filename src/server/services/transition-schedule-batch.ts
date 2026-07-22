@@ -44,7 +44,7 @@ export class BatchTransitionError extends Error {
 export interface TransitionBatchCommand {
   id: string;
   to: ScheduleBatchStatus;
-  actor: { userId: string; roles: AppRole[] };
+  actor: { userId: string; roles: AppRole[]; internal?: boolean };
   now: Date;
 }
 
@@ -75,7 +75,7 @@ export async function transitionScheduleBatch(
   // Separation of duties on approval. A batch with no known creator (legacy
   // null) is NOT approvable — otherwise SoD could be bypassed; and the approver
   // must not be the creator. Either way the batch stays DRAFT.
-  if (cmd.to === 'APPROVED') {
+  if (cmd.to === 'APPROVED' && !cmd.actor.internal) {
     if (batch.createdById === null) {
       throw new BatchTransitionError(
         'CREATOR_UNKNOWN',

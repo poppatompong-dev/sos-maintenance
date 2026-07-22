@@ -3,23 +3,31 @@ import type { AppRole } from '@/domain/work/types';
 import { can, ForbiddenError, type Permission } from '@/domain/authz/policy';
 
 /**
- * Server-side session + authorization guard (Sprint 5, ADR 0002 → Keycloak).
+ * Server-side actor + authorization guard.
  *
  * The RBAC matrix lives in the pure domain (`domain/authz/policy`). This module
  * bridges an HTTP request to it: resolve who the caller is, then enforce a
  * permission on the server.
  *
  * Auth resolution order:
- *   1. `AUTH_DEV_BYPASS=true` → DEV-ONLY: roles from the `x-dev-roles` header.
- *      Never enable in a shared/production environment.
- *   2. Otherwise → verify a Keycloak-issued `Authorization: Bearer <jwt>` against
- *      the realm JWKS and map its claims to roles.
- * With neither present it is SAFE BY DEFAULT: returns null (deny).
+ *   1. `AUTH_MODE=internal` → no-login internal operator. This is intentionally
+ *      explicit because it exposes the API to whoever can reach the deployment.
+ *   2. `AUTH_DEV_BYPASS=true` → DEV-ONLY roles from request headers.
+ *   3. Otherwise → verify a Keycloak-issued bearer token.
  */
 export interface AppSession {
   userId: string;
   roles: AppRole[];
+  internal?: boolean;
 }
+
+/** Stable DB actor used by the explicit no-login internal deployment mode. */
+export const INTERNAL_ACTOR_ID = '00000000-0000-0000-0000-000000000001';
+export const INTERNAL_SESSION: AppSession = {
+  userId: INTERNAL_ACTOR_ID,
+  roles: ['SYSTEM_ADMIN', 'PLANNER', 'TECHNICIAN', 'EXECUTIVE'],
+  internal: true,
+};
 
 const VALID_ROLES: readonly string[] = [
   'SYSTEM_ADMIN',
@@ -101,6 +109,9 @@ async function verifyBearer(req: Request): Promise<AppSession | null> {
 
 /** Resolve the current session from a request, or null when unauthenticated. */
 export async function getSession(req: Request): Promise<AppSession | null> {
+  if (process.env.AUTH_MODE === 'internal') {
+    return INTERNAL_SESSION;
+  }
   if (process.env.AUTH_DEV_BYPASS === 'true') {
     const roles = parseHeaderRoles(req.headers.get('x-dev-roles'));
     if (roles.length === 0) return null;

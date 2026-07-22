@@ -5,6 +5,7 @@ import {
   MaintenanceKind,
   RecurrenceFrequency,
   AssetLifecycleStatus,
+  AppRole,
 } from '@prisma/client';
 import { SOS_POLES } from './seed-data/sos-poles';
 import { CRITICAL_FUNCTIONS } from '../src/domain/readiness/critical-functions';
@@ -12,6 +13,7 @@ import { CRITICAL_FUNCTIONS } from '../src/domain/readiness/critical-functions';
 const prisma = new PrismaClient();
 
 const ASSET_TYPE_KEY = 'SOS_POLE';
+const INTERNAL_ACTOR_ID = '00000000-0000-0000-0000-000000000001';
 
 // Component template applied to every pole. Criticality drives readiness.
 const COMPONENTS: {
@@ -142,6 +144,25 @@ const PLANS: {
 
 async function main() {
   console.log('▶ Seeding SOS maintenance reference data…');
+
+  // Explicit AUTH_MODE=internal deployments need one stable DB actor for
+  // append-only work logs and schedule metadata. This is not a login account.
+  await prisma.user.upsert({
+    where: { id: INTERNAL_ACTOR_ID },
+    update: {
+      username: 'internal-operator',
+      displayName: 'เจ้าหน้าที่ภายใน (ไม่ใช้ login)',
+      roles: [AppRole.SYSTEM_ADMIN, AppRole.PLANNER, AppRole.TECHNICIAN, AppRole.EXECUTIVE],
+      active: true,
+      retiredAt: null,
+    },
+    create: {
+      id: INTERNAL_ACTOR_ID,
+      username: 'internal-operator',
+      displayName: 'เจ้าหน้าที่ภายใน (ไม่ใช้ login)',
+      roles: [AppRole.SYSTEM_ADMIN, AppRole.PLANNER, AppRole.TECHNICIAN, AppRole.EXECUTIVE],
+    },
+  });
 
   const assetType = await prisma.assetType.upsert({
     where: { key: ASSET_TYPE_KEY },

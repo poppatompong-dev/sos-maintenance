@@ -1,4 +1,4 @@
-import { getSession, requirePermission } from '@/server/auth/session';
+import { getSession, INTERNAL_ACTOR_ID, requirePermission } from '@/server/auth/session';
 import { getSyncBootstrap } from '@/server/queries/sync';
 import { errorResponse, json } from '@/server/http/respond';
 
@@ -12,7 +12,12 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request): Promise<Response> {
   try {
     const session = requirePermission(await getSession(req), 'workorder:start');
-    const bootstrap = await getSyncBootstrap(session.userId, new Date());
+    // No-login internal mode has no per-user assignment identity, so it receives
+    // every open field work order. Authenticated mode remains assignment-scoped.
+    const bootstrap = await getSyncBootstrap(
+      session.userId === INTERNAL_ACTOR_ID ? null : session.userId,
+      new Date(),
+    );
     return json(bootstrap);
   } catch (err) {
     return errorResponse(err);
