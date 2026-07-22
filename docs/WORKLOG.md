@@ -52,7 +52,12 @@ method. Every slice now requires a checkpoint, measurable acceptance criteria,
 current evidence, small implementation, quality gates, runtime smoke, self/team
 review, checkpoint update, and commit/push. The loop has explicit recovery rules
 to stop repeated retries and never mark work complete from build success alone.
-No additional skills were searched for or installed.
+Installed and adopted `codex-claude-loop` at
+`C:\Users\poppa\.agents\skills\codex-claude-loop\SKILL.md`, with Claude Code
+handling plan/implementation and Codex handling validation/review. The initial
+review is CONDITIONAL PASS for the internal no-login slice: production smoke and
+quality gates passed, while the public-URL security exception and post-change
+integration rerun remain open.
 
 ---
 
@@ -154,26 +159,6 @@ Font: `IBM Plex Sans Thai` self-hosted via next/font (free/OSS). Home route `/` 
 pushed. Sprint 1–3 complete.
 
 _Next: Sprint 4 — DB wiring (needs Docker). See RESUME_HERE.md._
-
----
-
-## 2026-07-22 — Adopted sequential Codex/Claude engineering loop
-
-**FACT:** ติดตั้ง `codex-claude-loop` จาก `bear2u/my-skills` ไว้ที่
-`C:\Users\poppa\.agents\skills\codex-claude-loop\SKILL.md` และอ่านคำแนะนำครบแล้ว
-CLI มีข้อความเตือนว่า PromptScript ไม่รองรับ global install แต่ไฟล์ skill ถูกคัดลอก
-และใช้งานได้จริง
-
-**DECISION:** ใช้บทบาท Claude = plan/implement และ Codex = validate/review โดยวนตาม
-checkpoint → acceptance → quality gates → runtime smoke → review → commit/push
-
-**REVIEW:** รอบแรกให้ผล CONDITIONAL PASS กับ internal no-login mode ใน commit
-`769370b`; หลักฐาน production smoke และ quality gates ผ่าน แต่ยังเปิด security
-exception ของ public Vercel URL และต้องรัน integration หลังเปลี่ยนโหมดเมื่อมี
-`DATABASE_URL` พร้อม
-
-**NEXT:** ทำ Workflow UI `/today` เป็น slice ถัดไป แล้วตรวจ integration/UAT ตาม queue
-ใน `docs/ENGINEERING_LOOP.md`
 
 ---
 
