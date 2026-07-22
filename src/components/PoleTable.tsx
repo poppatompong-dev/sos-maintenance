@@ -48,7 +48,7 @@ export function PoleTable({ poles }: { poles: PoleOverviewRow[] }) {
               </td>
               <td className="py-3 pr-5 pl-3 text-right align-top">
                 <a
-                  href="#"
+                  href={`/assets/${p.code}`}
                   aria-label={`เปิดรายละเอียด ${p.code} ${p.name}`}
                   className="inline-grid size-8 place-items-center rounded-lg text-muted hover:bg-border/60 hover:text-ink"
                 >

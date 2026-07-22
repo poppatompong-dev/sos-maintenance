@@ -2,6 +2,10 @@ import { ZodError } from 'zod';
 import { ForbiddenError } from '@/domain/authz/policy';
 import { UnauthenticatedError } from '@/server/auth/session';
 import { InspectionError } from '@/server/services/submit-inspection';
+import { WorkOrderTransitionError } from '@/server/services/transition-work-order';
+import { RepairError } from '@/server/services/record-repair';
+import { ScheduleError } from '@/server/services/create-schedule-batch';
+import { BatchTransitionError } from '@/server/services/transition-schedule-batch';
 
 /** JSON response helper for route handlers. */
 export function json(body: unknown, status = 200): Response {
@@ -42,6 +46,25 @@ export function errorResponse(err: unknown): Response {
   }
   if (err instanceof InspectionError) {
     return json({ error: err.code, message: err.message }, inspectionStatus(err.code));
+  }
+  if (err instanceof WorkOrderTransitionError) {
+    const status = err.code === 'WORKORDER_NOT_FOUND' ? 404 : 409;
+    return json({ error: err.code, message: err.message }, status);
+  }
+  if (err instanceof RepairError) {
+    const status =
+      err.code === 'FAULT_NOT_FOUND' || err.code === 'WORKORDER_NOT_FOUND'
+        ? 404
+        : 409;
+    return json({ error: err.code, message: err.message }, status);
+  }
+  if (err instanceof ScheduleError) {
+    const status = err.code === 'PLAN_NOT_FOUND' ? 404 : 409;
+    return json({ error: err.code, message: err.message }, status);
+  }
+  if (err instanceof BatchTransitionError) {
+    const status = err.code === 'BATCH_NOT_FOUND' ? 404 : 409;
+    return json({ error: err.code, message: err.message }, status);
   }
   console.error('[api] unhandled error:', err);
   return json({ error: 'INTERNAL', message: 'เกิดข้อผิดพลาดภายในระบบ' }, 500);

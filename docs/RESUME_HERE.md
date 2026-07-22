@@ -8,8 +8,8 @@ _Always-current pointer. Read this first when you sit down at a machine._
 _Last updated: 2026-07-22 (Sprint 4–6 wiring session)._
 
 ## Where we are
-- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ — implementation landed; live DB verification remains.
-- **Tests:** `pnpm test` → **136 passing**. `pnpm typecheck`, `pnpm lint`, `pnpm build` all green.
+- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ — implementation is in the working tree and the DB-backed integration gate is green.
+- **Tests:** `pnpm test` → **166 passing**; `pnpm test:integration` → **41 passing** against Neon. `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green.
 - **Running app (no Docker needed):** `pnpm dev` → `/` control-centre dashboard, `/today` technician field shell (installable PWA).
 - **Repo:** https://github.com/poppatompong-dev/sos-maintenance (private, branch `main`).
 - **What works end-to-end today:** the whole domain (readiness, recurrence, geo,
@@ -33,18 +33,25 @@ pwsh ./scripts/bootstrap.ps1
 ```
 
 ## ✅ DB verification complete / next external gate
-The supplied Neon production branch is connected and verified: migration, PostGIS,
-seed, and the full integration suite passed (18 tests in 4 files). Do not commit
-the connection string; keep it in deployment/local secret configuration only.
+The supplied Neon production branch is connected and verified. Migration
+`20260722090000_schedule_batch_created_by` was deployed, Prisma Client was
+regenerated, and the full DB-backed integration suite passed (**41 tests in 8
+files**), including worker-claim concurrency, schedule approval SoD, legacy
+creator rejection, and concurrent work-order code allocation. Do not commit the
+connection string; keep it in deployment/local secret configuration only.
 
 ## Next steps (in order)
-1. **Sprint 5 auth completion:** implement the real self-hosted Keycloak OIDC +
-   TOTP session path (the accepted ADR 0002 choice), replacing the deny-by-default
-   provider stub while keeping server-side RBAC/object authorization.
-3. **Sprint 6 completion:** extend REST coverage for mobile sync and remaining
-   doc 08 interfaces, each using the Zod DTOs and a service.
-4. **UI depth**: asset detail page, work-order list, Planner calendar (direction
-   C), wire the online MapLibre map (accessible list fallback already built).
+1. **Release review:** review the complete working tree, update the CI/protected
+   path as required, then create the controlled commit and push to `main`.
+2. **Auth e2e:** run the real self-hosted Keycloak OIDC + TOTP flow (the accepted
+   ADR 0002 choice) with live issuer/JWKS; server-side RBAC/object authorization
+   remains mandatory.
+3. **Vercel gate:** configure `DATABASE_URL`, `CRON_SECRET`, and the production
+   deployment, then verify the deployed cron endpoint and smoke test.
+4. **Security:** rotate the Neon password/connection secret before production,
+   because the credential was exposed during setup communication.
+5. **Later product depth:** reports, online MapLibre map (accessible list fallback
+   already built), and remaining doc 08 interfaces.
 
 ## Map of the code
 - `src/domain/**` — pure business logic (readiness, recurrence, geo, work state

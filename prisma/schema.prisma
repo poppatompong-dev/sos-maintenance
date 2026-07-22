@@ -173,6 +173,7 @@ model User {
 
   assignments        Assignment[]
   approvedSurveys    Asset[]           @relation("BaselineApprover")
+  createdBatches     ScheduleBatch[]   @relation("BatchCreator")
   approvedBatches    ScheduleBatch[]   @relation("BatchApprover")
   notifications      Notification[]
 
@@ -350,6 +351,7 @@ model ScheduleBatch {
   planId        String              @db.Uuid
   name          String
   status        ScheduleBatchStatus @default(DRAFT)
+  createdById   String?             @db.Uuid
   approverId    String?             @db.Uuid
   approvedAt    DateTime?
   publishedAt   DateTime?
@@ -358,6 +360,7 @@ model ScheduleBatch {
   updatedAt     DateTime            @updatedAt
 
   plan       MaintenancePlan @relation(fields: [planId], references: [id])
+  creator    User?           @relation("BatchCreator", fields: [createdById], references: [id])
   approver   User?           @relation("BatchApprover", fields: [approverId], references: [id])
   workOrders WorkOrder[]
 

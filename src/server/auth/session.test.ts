@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   getSession,
+  requireAnyPermission,
   requirePermission,
+  sessionFromClaims,
   UnauthenticatedError,
   type AppSession,
 } from './session';
@@ -17,7 +19,7 @@ afterEach(() => {
   else process.env.AUTH_DEV_BYPASS = original;
 });
 
-describe('getSession', () => {
+describe('getSession (dev bypass)', () => {
   it('denies (null) when no provider is wired', async () => {
     delete process.env.AUTH_DEV_BYPASS;
     expect(await getSession(reqWith({ 'x-dev-roles': 'SYSTEM_ADMIN' }))).toBeNull();
@@ -43,6 +45,38 @@ describe('getSession', () => {
   });
 });
 
+describe('sessionFromClaims (Keycloak token → session)', () => {
+  it('maps realm_access roles and the subject', () => {
+    const s = sessionFromClaims({
+      sub: 'kc-123',
+      realm_access: { roles: ['PLANNER', 'offline_access', 'TECHNICIAN'] },
+    });
+    expect(s).toEqual({ userId: 'kc-123', roles: ['PLANNER', 'TECHNICIAN'] });
+  });
+
+  it('merges per-client roles (resource_access) and dedupes', () => {
+    const s = sessionFromClaims(
+      {
+        sub: 'kc-9',
+        realm_access: { roles: ['TECHNICIAN'] },
+        resource_access: { 'sos-web': { roles: ['TECHNICIAN', 'PLANNER'] } },
+      },
+      { clientId: 'sos-web' },
+    );
+    expect(s?.roles.sort()).toEqual(['PLANNER', 'TECHNICIAN']);
+  });
+
+  it('returns null when there is no subject', () => {
+    expect(sessionFromClaims({ realm_access: { roles: ['PLANNER'] } })).toBeNull();
+  });
+
+  it('returns null when no recognised roles are present', () => {
+    expect(
+      sessionFromClaims({ sub: 'x', realm_access: { roles: ['offline_access'] } }),
+    ).toBeNull();
+  });
+});
+
 describe('requirePermission', () => {
   const tech: AppSession = { userId: 'u', roles: ['TECHNICIAN'] };
 
@@ -56,5 +90,19 @@ describe('requirePermission', () => {
 
   it('returns the session when permission is granted', () => {
     expect(requirePermission(tech, 'workorder:submit')).toBe(tech);
+  });
+});
+
+describe('requireAnyPermission', () => {
+  const tech: AppSession = { userId: 'u', roles: ['TECHNICIAN'] };
+
+  it('passes when one of the permissions is granted', () => {
+    expect(requireAnyPermission(tech, ['workorder:accept', 'workorder:submit'])).toBe(tech);
+  });
+
+  it('throws ForbiddenError when none are granted', () => {
+    expect(() => requireAnyPermission(tech, ['admin:system', 'admin:users'])).toThrow(
+      ForbiddenError,
+    );
   });
 });
