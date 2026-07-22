@@ -17,6 +17,16 @@ unfinished workflow actions. Production must not use `AUTH_DEV_BYPASS=true`.
 
 ---
 
+## 2026-07-22 — Go-live handoff plan
+
+Added [`GO_LIVE_HANDOFF.md`](GO_LIVE_HANDOFF.md) for the owner's 30-minute
+departure window. It defines the critical-path sequence, secure handling rules,
+runtime evidence required after Keycloak setup, the exact handoff report format,
+stop conditions, and the production Definition of Done. The plan preserves the
+current fail-closed Auth boundary and does not authorize a production bypass.
+
+---
+
 ## 2026-07-22 — Verification follow-up: worker and schedule/batch gates
 
 **Delivered in the working tree:** notification claiming now uses a compare-and-
