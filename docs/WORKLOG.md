@@ -15,16 +15,16 @@ is enabled and now runs `prisma generate` → `pnpm db:setup` →
 
 **Verification:** `pnpm install --frozen-lockfile`, `pnpm exec prisma generate`,
 `pnpm test` (136 tests), `pnpm typecheck`, `pnpm lint`, and `pnpm build` pass.
-Integration tests are wired but require `DATABASE_URL` and a live Postgres/PostGIS;
-the local run was not a valid DB verification because no database was configured.
+Against the supplied Neon production branch, `pnpm db:setup` completed migration,
+PostGIS enablement, and seed (27 assets, 324 components, 52 checklist items, 3
+plans). `pnpm test:integration` then passed **18 tests in 4 files** in 87.82s.
 
 **Decision:** retain the accepted ADR 0002 choice of self-hosted Keycloak (OIDC +
 TOTP MFA) for the real login provider. Neon/Vercel account setup and production
 secrets remain an account-owner task.
 
-**Next:** provide a real Postgres/PostGIS `DATABASE_URL`, run `pnpm db:setup` and
-the integration suite, then implement the real Keycloak login/session path and
-complete the QA/UAT gate.
+**Next:** implement the real Keycloak login/session path, deploy with secrets
+configured outside Git, and complete the QA/UAT gate.
 
 ---
 

@@ -32,16 +32,13 @@ cd C:\dev\sos-maintenance
 pwsh ./scripts/bootstrap.ps1
 ```
 
-## ⛔ External verification blocker
-The DB-backed implementation is wired, but this machine has no configured
-`DATABASE_URL` / live Postgres+PostGIS. Integration tests therefore fail at Prisma
-initialization until a real DB is available. Docker remains the local option; Neon
-is the planned free-cloud option.
+## ✅ DB verification complete / next external gate
+The supplied Neon production branch is connected and verified: migration, PostGIS,
+seed, and the full integration suite passed (18 tests in 4 files). Do not commit
+the connection string; keep it in deployment/local secret configuration only.
 
 ## Next steps (in order)
-1. **Live DB verification:** set `DATABASE_URL` to a real Postgres/PostGIS,
-   run `pnpm db:setup`, then `pnpm test:integration` and capture the evidence.
-2. **Sprint 5 auth completion:** implement the real self-hosted Keycloak OIDC +
+1. **Sprint 5 auth completion:** implement the real self-hosted Keycloak OIDC +
    TOTP session path (the accepted ADR 0002 choice), replacing the deny-by-default
    provider stub while keeping server-side RBAC/object authorization.
 3. **Sprint 6 completion:** extend REST coverage for mobile sync and remaining
