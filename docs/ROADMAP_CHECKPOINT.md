@@ -4,7 +4,7 @@
 `docs/ROADMAP_CHECKPOINT.md` และต้องอัปเดตทุกครั้งที่สถานะของ milestone หรือ
 หลักฐานการทดสอบเปลี่ยนแปลง
 
-**สถานะล่าสุดที่ตรวจจริง:** 2026-07-22 (Asia/Bangkok) — หลัง push `066f040`  
+**สถานะล่าสุดที่ตรวจจริง:** 2026-07-22 (Asia/Bangkok) — หลัง push `066f040`
 **Production URL:** https://sos-maintenance-vert.vercel.app  
 **Repository:** https://github.com/poppatompong-dev/sos-maintenance  
 **Branch:** `main`
