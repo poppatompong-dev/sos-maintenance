@@ -11,7 +11,7 @@
 
 ## สรุปสำหรับผู้บริหาร
 
-**สถานะรวม: INTERNAL MODE IN PROGRESS — ตัด login ตามคำสั่งเจ้าของโปรเจคแล้ว; ต้อง deploy และ smoke test ใหม่**
+**สถานะรวม: INTERNAL MODE ACTIVE — ตัด login ตามคำสั่งเจ้าของโปรเจคแล้ว และ production smoke ผ่าน**
 
 ส่วนแกนธุรกิจ ฐานข้อมูล และการ deploy ของ shell ผ่านแล้ว เดิม production API ตอบ
 `401 Unauthorized` เพราะยังไม่มี Keycloak แต่ owner decision ล่าสุดคือไม่ใช้ login
@@ -30,8 +30,8 @@
 | Sprint 3 — UI/PWA shell | PARTIAL | `/`, `/today`, `/offline` ตอบ 200; manifest/service worker ใช้งานได้ | ปุ่มและ navigation ต้องเชื่อม workflow จริง |
 | Sprint 4 — DB wiring | DONE | Neon migration, PostGIS, seed และ Prisma adapter ผ่าน | integration suite ต้องผ่าน |
 | Sprint 5 — Auth/RBAC | DEFERRED | owner เลือก no-login internal mode; Keycloak ถูกพักไว้ | network boundary และ internal-mode smoke ผ่าน |
-| Sprint 6 — REST/API | PARTIAL | routes และ integration tests ผ่าน; production ยังเรียก API ไม่ได้เมื่อไม่มี login | authenticated API smoke ผ่านทุก critical route |
-| Vercel deployment | PARTIAL | public shell 200; authorized cron smoke 200; ต้อง redeploy `AUTH_MODE=internal` | internal API smoke ผ่าน และ network exposure ถูกยอมรับ/จำกัด |
+| Sprint 6 — REST/API | PASS WITH SECURITY EXCEPTION | routes, integration evidence และ no-login production smoke ผ่าน | authenticated API gate replaced by internal-mode smoke; network boundary remains open |
+| Vercel deployment | PASS WITH SECURITY EXCEPTION | latest deployment Ready; no-login API smoke ผ่าน | ต้องจำกัด network หรือยอมรับ public exposure เป็น security exception |
 | Security release gate | BLOCKED | ต้อง rotate Neon credential อีกครั้งก่อน production | secret rotation, no secret in Git/logs, rollback evidence |
 | QA/UAT release gate | BLOCKED | ต้องทดสอบ no-login API และ workflow UI | `docs/spec/06_DELIVERY_QA_UAT.md` ผ่านพร้อม exception ที่อนุมัติ |
 
@@ -45,20 +45,22 @@
 | `GET /today` | 200 | technician shell render ได้ |
 | `GET /work-orders` | 200 | work-order shell render ได้ |
 | `GET /offline` | 200 | offline fallback render ได้ |
-| `GET /api/readiness/overview` | PENDING | ต้อง redeploy ด้วย `AUTH_MODE=internal` แล้วคาดหวัง 200 |
-| `GET /api/sync/bootstrap` | PENDING | ต้อง redeploy ด้วย `AUTH_MODE=internal` แล้วคาดหวัง 200 |
+| `GET /api/readiness/overview` | 200 | no-login smoke ผ่าน; response source `db`, rollup 27 จุด UNKNOWN |
+| `GET /api/sync/bootstrap` | 200 | no-login smoke ผ่าน; work package ว่างตามข้อมูลปัจจุบัน |
+| `GET /api/assets` | 200 | no-login smoke ผ่าน; 27 assets, first `EP01` |
+| `POST /api/inspections` invalid body | 400 | route ผ่าน internal actor แล้ว Zod validation ทำงาน |
 | authorized `GET /api/jobs/tick` | 200 | DB/cron runtime ตอบสนองแล้ว |
-| unit tests | 166/166 | logic และ server tests ผ่าน |
-| integration tests | 41/41, 8 files | DB-backed integration ผ่านกับ Neon |
+| unit tests | 167/167 | logic และ server tests ผ่านหลัง internal-mode change |
+| integration tests | 41/41, 8 files (prior gate) | DB-backed integration ผ่านกับ Neon; post-change rerun pending locally |
 | typecheck / lint / build / diff check | PASS | quality gate ใน repo ผ่าน |
 
 ## งานเร่งด่วนบน critical path
 
 | ลำดับ | งาน | ผู้รับผิดชอบ | สถานะ/หลักฐานที่ต้องส่งกลับ |
 |---:|---|---|---|
-| 1 | ตั้ง `AUTH_MODE=internal` ใน Vercel Production | ทีม deploy | deployment ID และ env names เท่านั้น |
-| 2 | ยืนยัน network boundary ของ URL ที่จะใช้งานภายใน | เจ้าของบัญชี + ทีม | access test จาก internal network และ public exposure decision |
-| 3 | ทดสอบ API/readiness/sync โดยไม่ login | ทีมพัฒนา | HTTP status และ response shape โดยไม่เปิด secret |
+| 1 | ตั้ง `AUTH_MODE=internal` ใน Vercel Production | ทีม deploy | DONE; env เก่า `AUTH_DEV_BYPASS`/`AUTH_SECRET` ถูกนำออก |
+| 2 | ยืนยัน network boundary ของ URL ที่จะใช้งานภายใน | เจ้าของบัญชี + ทีม | OPEN SECURITY EXCEPTION; Vercel URL ยัง public |
+| 3 | ทดสอบ API/readiness/sync โดยไม่ login | ทีมพัฒนา | DONE; HTTP 200/400 และ response shape ผ่าน |
 | 4 | ต่อปุ่ม `/today`, dashboard actions และ navigation ให้เป็น workflow จริง | ทีมพัฒนา | browser smoke/UAT evidence |
 | 5 | หมุน Neon database credential ก่อน release | เจ้าของบัญชี + ทีม deploy | rotation timestamp และ redeploy result; ห้ามบันทึกค่า secret |
 | 6 | Redeploy และรัน QA/UAT gate | ทีมทั้งหมด | test totals, smoke results, known issues, rollback point |

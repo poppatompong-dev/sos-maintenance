@@ -10,10 +10,10 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 Added [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md) as the single progress
 view for the project. It records milestone status, runtime evidence, owners,
 critical-path work, and the Definition of Done for production. The checkpoint
-corrects the current evidence boundary: database and authorized cron are
-working, while the production readiness and technician APIs still return 401
-because live Keycloak configuration is not present; the UI shell also contains
-unfinished workflow actions. Production must not use `AUTH_DEV_BYPASS=true`.
+was the pre-decision snapshot: database and authorized cron were working, while
+the production readiness and technician APIs returned 401 because live Keycloak
+configuration was not present. It was superseded by the later owner decision to
+use explicit `AUTH_MODE=internal`.
 
 ---
 
@@ -29,13 +29,30 @@ mode rather than an active release blocker.
 
 ---
 
+## 2026-07-22 — Internal mode deployed and smoke-tested
+
+Commit `769370b` was pushed and the latest Vercel production deployment reached
+`Ready`. `AUTH_MODE=internal` was configured in Production; obsolete
+`AUTH_DEV_BYPASS` and `AUTH_SECRET` variables were removed. No-Authorization
+runtime smoke passed: `/api/readiness/overview` **200** with DB source and 27
+UNKNOWN poles, `/api/sync/bootstrap` **200**, `/api/assets` **200** with 27
+assets, `/api/work-orders`, `/api/faults`, and `/api/schedule-batches` **200**;
+invalid inspection POST reached validation and returned **400**. The Vercel URL
+remains public, so this is recorded as a security exception until a private
+network/access boundary is added. Local unit tests are **167/167**; the prior
+Neon integration evidence remains 41/41, while a post-change local integration
+rerun is pending because this machine has no `DATABASE_URL`.
+
+---
+
 ## 2026-07-22 — Go-live handoff plan
 
 Added [`GO_LIVE_HANDOFF.md`](GO_LIVE_HANDOFF.md) for the owner's 30-minute
 departure window. It defines the critical-path sequence, secure handling rules,
 runtime evidence required after Keycloak setup, the exact handoff report format,
 stop conditions, and the production Definition of Done. The plan preserves the
-current fail-closed Auth boundary and does not authorize a production bypass.
+original fail-closed Auth boundary; it was subsequently updated by the owner's
+no-login internal-mode decision.
 
 ---
 
