@@ -80,8 +80,11 @@ NEXT SLICE
   machine, อ่าน GPS, ส่ง checklist envelope พร้อม SHA-256 และเปลี่ยนเป็น `SUBMITTED`
 - ใช้ `mutationId` เดิมเมื่อ retry หลัง evidence write สำเร็จแต่ transition ยังไม่ผ่าน
   จึงไม่สร้าง checklist evidence ซ้ำจากการกดซ้ำโดยไม่ตั้งใจ
-- ยังไม่ปิด slice: browser smoke หลัง deployment ต้องยืนยันกับ fixture จริง และ
-  `pnpm test:integration` ต้องรันบนเครื่องที่มี `DATABASE_URL`
+- production shell/API smoke ผ่าน: `/today` 200 พร้อม shell ใหม่,
+  `/api/sync/bootstrap` 200 และ `/api/readiness/overview` 200 (`source=db`, 27 จุด)
+- ยังไม่ปิด slice: production มี open work order = 0 จึงยังไม่มี fixture ให้กด
+  start/submit ใน browser จริง และ `pnpm test:integration` ต้องรันบนเครื่องที่มี
+  `DATABASE_URL`
 - ขอบเขตที่ยังไม่ทำใน slice นี้: QR scan, IndexedDB offline mutation queue,
   photo attachment และ dashboard actions
 

@@ -12,7 +12,7 @@ _Last updated: 2026-07-22 (production verification and roadmap checkpoint)._
 ## Where we are
 - **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ — implementation is in the working tree and the DB-backed integration gate is green.
 - **Tests:** `pnpm test` → **167 passing**; the prior DB-backed integration gate was **41 passing** against Neon. After the internal-mode change, local integration rerun is pending because this machine has no `DATABASE_URL`. `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green.
-- **Current workflow slice:** `/today` now loads the real sync bootstrap, shows open field work orders, starts assigned work, captures GPS/checklist results, submits idempotent evidence, and advances the work order to `SUBMITTED`. Production browser smoke and post-change DB integration are still pending.
+- **Current workflow slice:** `/today` now loads the real sync bootstrap, shows open field work orders, starts assigned work, captures GPS/checklist results, submits idempotent evidence, and advances the work order to `SUBMITTED`. Production shell/API smoke passed; interactive happy-path smoke still needs an open-work-order fixture, and post-change DB integration is pending.
 - **Running app (no Docker needed):** `pnpm dev` → `/` control-centre dashboard, `/today` technician field shell (installable PWA).
 - **Repo:** https://github.com/poppatompong-dev/sos-maintenance (private, branch `main`).
 - **What works end-to-end today:** the whole domain (readiness, recurrence, geo,
