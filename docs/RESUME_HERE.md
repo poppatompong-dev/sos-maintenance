@@ -5,11 +5,11 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-21 (late evening, autonomous session)._
+_Last updated: 2026-07-22 (Sprint 4–6 wiring session)._
 
 ## Where we are
-- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ — all done, tested, pushed.
-- **Tests:** `pnpm test` → **129 passing**. `pnpm typecheck`, `pnpm lint`, `pnpm build` all green.
+- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ — implementation landed; live DB verification remains.
+- **Tests:** `pnpm test` → **136 passing**. `pnpm typecheck`, `pnpm lint`, `pnpm build` all green.
 - **Running app (no Docker needed):** `pnpm dev` → `/` control-centre dashboard, `/today` technician field shell (installable PWA).
 - **Repo:** https://github.com/poppatompong-dev/sos-maintenance (private, branch `main`).
 - **What works end-to-end today:** the whole domain (readiness, recurrence, geo,
@@ -32,25 +32,20 @@ cd C:\dev\sos-maintenance
 pwsh ./scripts/bootstrap.ps1
 ```
 
-## ⛔ One blocker to clear
-**Docker Desktop is not installed yet.** Everything DB-backed is written but unrun
-until Docker is available:
-- `pnpm db:migrate` (create the first migration) → `pnpm db:postgis` → `pnpm db:seed`
-- Keycloak / Caddy / integration + E2E tests
-Install Docker Desktop, then `docker compose up -d` and the above.
+## ⛔ External verification blocker
+The DB-backed implementation is wired, but this machine has no configured
+`DATABASE_URL` / live Postgres+PostGIS. Integration tests therefore fail at Prisma
+initialization until a real DB is available. Docker remains the local option; Neon
+is the planned free-cloud option.
 
 ## Next steps (in order)
-1. **Sprint 4 — DB wiring** (needs Docker Desktop): install Docker →
-   `docker compose up -d` → `pnpm db:migrate` (creates the first migration) →
-   `pnpm db:postgis` → `pnpm db:seed`. Then implement Prisma repositories behind
-   the service ports (`src/server/services/submit-inspection.ts` defines
-   `InspectionPort` — write a Prisma adapter), point the dashboard query
-   (`src/server/queries/readiness-overview.ts`) at the DB, and enable the CI
-   `integration` job (flip `if: false` in `.github/workflows/ci.yml`).
-2. **Sprint 5 — Auth**: Keycloak OIDC login + session; enforce the RBAC policy
-   (`src/domain/authz/policy.ts`, already tested) on every route/server action.
-3. **Sprint 6 — REST API routes** for doc 08 §Interface (assets, work-orders,
-   faults, mobile sync…), each parsing with the Zod DTOs and calling a service.
+1. **Live DB verification:** set `DATABASE_URL` to a real Postgres/PostGIS,
+   run `pnpm db:setup`, then `pnpm test:integration` and capture the evidence.
+2. **Sprint 5 auth completion:** implement the real self-hosted Keycloak OIDC +
+   TOTP session path (the accepted ADR 0002 choice), replacing the deny-by-default
+   provider stub while keeping server-side RBAC/object authorization.
+3. **Sprint 6 completion:** extend REST coverage for mobile sync and remaining
+   doc 08 interfaces, each using the Zod DTOs and a service.
 4. **UI depth**: asset detail page, work-order list, Planner calendar (direction
    C), wire the online MapLibre map (accessible list fallback already built).
 

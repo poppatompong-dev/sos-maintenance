@@ -38,7 +38,6 @@ jobs:
   # is defined from day one.
   integration:
     runs-on: ubuntu-latest
-    if: false # flip on once migrations + repository tests exist
     services:
       postgres:
         image: postgis/postgis:16-3.4
@@ -62,5 +61,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
       - run: pnpm db:setup
-      - run: pnpm test
+      - run: pnpm test:integration

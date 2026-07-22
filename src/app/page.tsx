@@ -7,15 +7,16 @@ import {
   HelpCircleIcon,
   MapPinIcon,
 } from '@/components/icons';
-import { getReadinessOverview } from '@/server/queries/readiness-overview';
+import { loadReadinessOverview } from '@/server/queries/readiness-overview';
 import { formatThaiDateTime } from '@/domain/shared/thai-date';
 
 // Rendered per request so "data as of" reflects the real time (and no build-time
-// clock is baked in). Swaps to DB-backed data in Sprint 4.
+// clock is baked in). DB-backed (Sprint 4) with a seed fallback when no database
+// is reachable, so dev without Docker still renders the truthful first-run state.
 export const dynamic = 'force-dynamic';
 
-export default function DashboardPage() {
-  const overview = getReadinessOverview(new Date());
+export default async function DashboardPage() {
+  const overview = await loadReadinessOverview(new Date());
   const needSurvey = overview.rollup.counts.UNKNOWN;
 
   return (

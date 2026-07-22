@@ -5,6 +5,29 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-22 — Sprint 4–6: DB wiring, auth boundary, REST APIs
+
+**Delivered in the working tree:** Prisma/PostGIS persistence adapter and DB-backed
+queries, server-side auth boundary/RBAC checks, and REST routes for assets,
+work-orders, faults, readiness overview, and inspections. The CI integration job
+is enabled and now runs `prisma generate` → `pnpm db:setup` →
+`pnpm test:integration`.
+
+**Verification:** `pnpm install --frozen-lockfile`, `pnpm exec prisma generate`,
+`pnpm test` (136 tests), `pnpm typecheck`, `pnpm lint`, and `pnpm build` pass.
+Integration tests are wired but require `DATABASE_URL` and a live Postgres/PostGIS;
+the local run was not a valid DB verification because no database was configured.
+
+**Decision:** retain the accepted ADR 0002 choice of self-hosted Keycloak (OIDC +
+TOTP MFA) for the real login provider. Neon/Vercel account setup and production
+secrets remain an account-owner task.
+
+**Next:** provide a real Postgres/PostGIS `DATABASE_URL`, run `pnpm db:setup` and
+the integration suite, then implement the real Keycloak login/session path and
+complete the QA/UAT gate.
+
+---
+
 ## 2026-07-21 (evening) — Sprint 3: UI (in progress)
 
 **Goal:** Build the role-aware UI shells (Dashboard A control-centre, Technician B
