@@ -37,7 +37,7 @@ Copy-Item .env.example .env
 
 # 3a. ถ้าสร้างแบบ -Offline มาแล้ว: รันได้เลย ไม่ต้องมีเน็ต
 pnpm dev            # http://localhost:3000  และ  /today
-pnpm test           # 129 tests
+pnpm test           # 182 tests
 
 # 3b. ถ้าสร้างแบบเล็ก: ต้อง install ก่อน (ครั้งเดียว ต้องมีเน็ต)
 pnpm install

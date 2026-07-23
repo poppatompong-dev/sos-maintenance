@@ -18,9 +18,18 @@ Codex is near its context limit. Continue from this file, then read
   - `/api/sync/bootstrap` = 200, `workOrders=[]`
   - `/api/readiness/overview` = 200, `source=db`, 27 assets
   - `/api/assets` = 200, 27 assets, first `EP01`
-- Local quality gate passed: `pnpm test` 167/167, typecheck, lint, build, and
-  `git diff --check`.
+- Local quality gate passed: `pnpm test` **182/182 (22 files)**,
+  `pnpm test:integration` **43/43 (9 files)**, typecheck, lint, build, and
+  `git diff --check`. (Prior CI-green baseline: 167 unit + 41/41 integration.)
 - Production has no open work-order fixture. Do not fabricate one in production.
+- **Guarded local demo fixture DONE:** `pnpm db:seed:demo` (fail-closed,
+  local-`sos`-only) creates one idempotent ASSIGNED `DEMO-LOCAL-EP01-MONTHLY`.
+  `/today` happy-path UAT verified on `http://localhost:3100/today`:
+  `ASSIGNED→IN_PROGRESS` 200, `POST /api/inspections` 201, → `SUBMITTED` 200; DB
+  shows status `SUBMITTED` v2, 10 responses / 1 `clientMutationId`, distance 0 m,
+  1 `UNKNOWN` `ReadinessSnapshot`, two work_log transitions. After submit `/today`
+  shows zero open orders (SUBMITTED excluded from bootstrap). See
+  `docs/DEMO_RUNBOOK.md`.
 
 ## DECISION
 
@@ -35,33 +44,35 @@ The prior CI failure (run `29918222990`) was a pnpm configuration mismatch:
 `pnpm/action-setup@v4` had `version: 10` while `package.json` pins
 `packageManager: pnpm@10.34.5`. **Fixed in commit `8ae02f9`** by removing the
 duplicate `version:` declaration from both jobs so action-setup reads the pin.
-GitHub Actions run **29977349490** is green: `quality` success (47s),
-`integration` success (1m0s) with **41/41 integration tests in 8 files** on the
-ephemeral PostGIS service. The integration order is unchanged:
+GitHub Actions run **29977349490** was green (baseline before this slice):
+`quality` success (47s), `integration` success (1m0s) with **41/41 integration
+tests in 8 files** on the ephemeral PostGIS service. The integration order is
+unchanged:
 
 ```text
 prisma generate → pnpm db:setup → pnpm test:integration
 ```
 
-### New known gap (do not fix silently; plan a slice)
+### Known gap (do not fix silently; plan a slice)
 
-GPS >100m review flag exists, but the **mandatory reason** for a position >100m
-from the asset is **absent from schema/payload/UI**, so **UAT case 8
-(`docs/spec/06`) is not complete**. This machine also has **no Docker/psql**, so
-hands-on `/today` UAT needs a controlled local/staging DB — never fabricate a
-production work order.
+GPS >100m review flag exists and the schema column
+`ChecklistResponse.locationReason` **already exists**, but the **DTO/service/UI
+wiring** that collects and persists the mandatory reason for a position >100m from
+the asset is **not yet wired**, so **UAT case 8 (`docs/spec/06`) is not complete**.
+This is a wiring slice, not a schema change. (Local Docker Desktop + PostGIS is now
+healthy on this machine; `/today` UAT ran against a real local DB via the guarded
+fixture — never fabricate a production work order.)
 
 ## NEXT
 
-1. **Next slice:** provision a safe local/staging test DB, then implement a
-   **production-safe, explicitly guarded** local demo work-order fixture so the
-   owner can exercise `/today`. **Not yet implemented** — do not claim it is, and
-   never write a demo/fabricated work order to production.
-2. For `/today` happy-path UAT, use that controlled non-production fixture or wait
-   until the municipality creates a real work order: start → checklist/GPS →
-   submit → `SUBMITTED`.
-3. Close the GPS >100m mandatory-reason gap in schema/payload/UI (domain first,
-   with tests) to complete UAT case 8.
+1. ~~Safe test DB + guarded demo fixture~~ — **DONE.** `pnpm db:seed:demo` is
+   fail-closed and local-`sos`-only; never writes a demo work order to
+   production/Neon. See `docs/DEMO_RUNBOOK.md`.
+2. ~~`/today` happy-path UAT~~ — **DONE** (start → checklist/GPS → submit →
+   `SUBMITTED`), verified in-browser on the local DB (evidence in FACT above).
+3. **Next slice:** close the GPS >100m mandatory-reason gap by adding the missing
+   DTO/service/UI wiring (domain first, with tests) — the `locationReason` column
+   already exists — to complete UAT case 8. Then wire dashboard actions.
 4. Keep public Vercel + no-login as a security exception until a private
    network boundary is established or explicitly accepted by the owner.
 5. Neon credential rotation remains a release gate because the original

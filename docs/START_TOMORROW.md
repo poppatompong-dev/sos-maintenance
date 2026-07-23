@@ -63,7 +63,7 @@ pnpm dev
 #   → http://localhost:3000/today  หน้าเจ้าหน้าที่ภาคสนาม (PWA)
 
 # 4. ยืนยันว่าทุกอย่างปกติ
-pnpm test        # ควรได้ 167 ผ่าน
+pnpm test        # ควรได้ 182 ผ่าน
 ```
 
 ---
@@ -81,10 +81,15 @@ git add -A && git commit -m "อธิบายสั้น ๆ" && git push   #
 
 ## ตอนนี้อยู่ตรงไหน / ก้าวต่อไป
 
-- เสร็จแล้ว: **Sprint 1 (ฐานราก) + 2 (domain logic) + 3 (UI + PWA)** — 129 tests ผ่าน
+- เสร็จแล้ว: **Sprint 1–4 (ฐานราก, domain logic, UI+PWA, DB wiring)** — 182 unit tests
+  (22 files) + 43/43 DB integration (9 files) ผ่าน; CI pnpm mismatch แก้แล้ว
+- **`/today` happy-path UAT ผ่านบน local DB แล้ว** ผ่าน guarded demo fixture
+  (`pnpm db:seed:demo`, local-`sos`-only + fail-closed) — ดู `docs/DEMO_RUNBOOK.md`
 - แอปเปิดดูได้จริงที่ `/` และ `/today` (แสดงสถานะจริง: 27 จุดยัง "ยังไม่ทราบ" เพราะยังไม่ได้สำรวจ)
-- **ก้าวถัดไปปัจจุบัน:** แก้ pnpm mismatch ใน CI, ตรวจ integration บน PostGIS ชั่วคราว,
-  แล้วทำ UAT `/today` เมื่อมีใบงานจริง — รายละเอียดอยู่ใน `docs/RESUME_HERE.md`
+- **ก้าวถัดไปปัจจุบัน:** wire GPS >100m mandatory reason (คอลัมน์ `locationReason`
+  มีอยู่แล้ว, ขาด DTO/service/UI) เพื่อปิด UAT case 8 แล้วต่อ dashboard actions —
+  รายละเอียดอยู่ใน `docs/RESUME_HERE.md`. ยังไม่ production-ready (public Vercel URL +
+  Neon rotation ยังเปิดอยู่)
 
 ไม่ต้องรีบครับ พักผ่อนให้เต็มที่ งานรออยู่บน GitHub ครบถ้วน 🌙
 

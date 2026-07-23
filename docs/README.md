@@ -35,7 +35,8 @@ state and the next step. This page maps everything else.
 (agent prompt) > prototype (visual reference only).
 
 ## Status at a glance
-- ✅ Sprint 1 Foundation · ✅ Sprint 2 Domain layer · ✅ Sprint 3 UI/PWA shell · ✅ Sprint 4 DB wiring · IN PROGRESS Workflow UI UAT
-- Tests: **167 unit passing** + **41/41 DB integration** green in CI (run 29977349490, commit `8ae02f9`); typecheck / lint / build / diff-check green. CI pnpm mismatch **fixed**.
-- Constraints: this machine has no Docker/psql (hands-on `/today` UAT needs a controlled local/staging DB — never fabricate production work orders); GPS >100m mandatory reason missing (UAT case 8 not complete).
-- Next: provision a safe test env + a production-safe, guarded local demo fixture (not yet implemented), then run `/today` UAT.
+- ✅ Sprint 1 Foundation · ✅ Sprint 2 Domain layer · ✅ Sprint 3 UI/PWA shell · ✅ Sprint 4 DB wiring · ✅ Workflow UI `/today` happy-path UAT (local DB)
+- Tests: **182 unit passing** (22 files) + **43/43 DB integration** (9 files); typecheck / lint / build / diff-check green. CI pnpm mismatch **fixed**. (Prior CI-green baseline: 167 + 41/41, run 29977349490, commit `8ae02f9`.)
+- Guarded local demo fixture **DONE**: `pnpm db:seed:demo` (fail-closed, local-`sos`-only) → `/today` happy path verified on local PostGIS (see [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md)). Never fabricate production work orders.
+- Constraints: GPS >100m *mandatory reason* wiring missing — the `ChecklistResponse.locationReason` column already exists but DTO/service/UI wiring is absent (UAT case 8 not complete); public Vercel URL remains an OPEN security exception; Neon credential rotation still required before release.
+- Next: wire the GPS >100m mandatory reason (domain-first, with tests), then dashboard actions.

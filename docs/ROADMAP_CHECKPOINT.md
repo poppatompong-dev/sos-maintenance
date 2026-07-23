@@ -4,7 +4,7 @@
 `docs/ROADMAP_CHECKPOINT.md` และต้องอัปเดตทุกครั้งที่สถานะของ milestone หรือ
 หลักฐานการทดสอบเปลี่ยนแปลง
 
-**สถานะล่าสุดที่ตรวจจริง:** 2026-07-23 (Asia/Bangkok) — หลัง push `8ae02f9` (CI pnpm fix + integration green)
+**สถานะล่าสุดที่ตรวจจริง:** 2026-07-23 (Asia/Bangkok) — guarded local demo fixture DONE + `/today` browser UAT ผ่านบน local PostGIS (baseline CI-green ก่อนหน้า: `8ae02f9`)
 **Production URL:** https://sos-maintenance-vert.vercel.app  
 **Repository:** https://github.com/poppatompong-dev/sos-maintenance  
 **Branch:** `main`
@@ -19,9 +19,11 @@
 แต่ deployment ต้องอยู่หลัง network boundary ภายใน เพราะทุก request จะมีสิทธิ์เต็ม
 
 `AUTH_MODE=internal` เป็นโหมดที่ตั้งใจเปิดใช้ตามคำสั่งล่าสุด ไม่ใช่ dev bypass แต่ห้าม
-ใช้กับ URL ที่เปิดสาธารณะโดยไม่มี network restriction งาน `/today` เริ่มเชื่อมกับ
-bootstrap และ workflow API แล้ว; production shell/API smoke ผ่าน แต่ยังไม่มี open work
-order fixture สำหรับทดสอบ happy path ใน browser
+ใช้กับ URL ที่เปิดสาธารณะโดยไม่มี network restriction งาน `/today` เชื่อมกับ bootstrap
+และ workflow API แล้ว; production shell/API smoke ผ่าน และ **`/today` happy path UAT
+ผ่านแล้วบน local PostGIS** ผ่าน guarded demo fixture (`pnpm db:seed:demo`) —
+start → checklist/GPS → submit → `SUBMITTED`. ยังไม่ประกาศ production-ready:
+public Vercel URL ยังเป็น OPEN security exception และต้อง rotate Neon credential ก่อน release
 
 ## Checkpoint ตาม milestone
 
@@ -29,7 +31,7 @@ order fixture สำหรับทดสอบ happy path ใน browser
 |---|---|---|---|
 | Sprint 1 — Foundation | DONE | Next.js, Prisma schema, PostGIS, seed 27 จุด, CI และ ADR อยู่ใน repo | ไม่มีงานค้างในขอบเขต sprint |
 | Sprint 2 — Domain layer | DONE | readiness, RBAC, work state machine, GPS, sync และ metrics มี unit tests | กฎธุรกิจต้องคง pure และมี tests |
-| Sprint 3 — UI/PWA shell | IN PROGRESS | `/today` production 200 พร้อม shell ใหม่; client workflow ต่อ bootstrap/start/submit แล้ว | fixture browser/a11y smoke และ offline queue ยังต้องตรวจ |
+| Sprint 3 — UI/PWA shell | IN PROGRESS | `/today` happy-path UAT ผ่านบน local PostGIS ผ่าน guarded demo fixture (start→checklist/GPS→submit→`SUBMITTED`, browser `localhost:3100/today`) | dashboard actions, offline queue, QR/photo ยังต้องทำ |
 | Sprint 4 — DB wiring | DONE | integration suite **41/41 (8 files)** ผ่านบน CI ephemeral PostGIS (run 29977349490); Neon migration/PostGIS/seed/Prisma adapter ผ่าน | integration suite ต้องผ่าน — ผ่านแล้ว |
 | CI pipeline (pnpm resolution) | DONE | ลบ `version: 10` ที่ซ้ำใน `ci.yml`; `pnpm/action-setup@v4` อ่าน pin `pnpm@10.34.5`; `quality`+`integration` เขียว (run 29977349490) | ทั้งสอง job เขียวโดยไม่ต้องใช้ Neon secret — ผ่านแล้ว |
 | Sprint 5 — Auth/RBAC | DEFERRED | owner เลือก no-login internal mode; Keycloak ถูกพักไว้ | network boundary และ internal-mode smoke ผ่าน |
@@ -53,9 +55,11 @@ order fixture สำหรับทดสอบ happy path ใน browser
 | `GET /api/assets` | 200 | no-login smoke ผ่าน; 27 assets, first `EP01` |
 | `POST /api/inspections` invalid body | 400 | route ผ่าน internal actor แล้ว Zod validation ทำงาน |
 | authorized `GET /api/jobs/tick` | 200 | DB/cron runtime ตอบสนองแล้ว |
-| unit tests | 167/167, 21 files | logic และ server tests ผ่านหลัง internal-mode change |
-| integration tests | 41/41, 8 files | DB-backed integration **เขียวบน CI** ephemeral PostGIS (run 29977349490, 3.89s); post-change rerun ยืนยันแล้ว |
-| CI quality / integration jobs | success (47s / 1m0s) | GitHub Actions run 29977349490, commit `8ae02f9` — pnpm resolution fixed |
+| unit tests | 182/182, 22 files | logic + server + guard tests ผ่าน (เพิ่ม demo-fixture guard tests) |
+| integration tests | 43/43, 9 files | DB-backed integration ผ่านบน local PostGIS (เพิ่ม `demo-fixture.itest.ts` พิสูจน์ idempotency) |
+| `/today` browser UAT | PASS | local `localhost:3100/today`: demo ASSIGNED + 10 checklist จริง; `ASSIGNED→IN_PROGRESS` 200, `POST /api/inspections` 201, → `SUBMITTED` 200, ไม่มี console error |
+| DB evidence (post-submit) | PASS | `WorkOrder.status=SUBMITTED` v2; 10 `ChecklistResponse` / 1 `clientMutationId`; distance 0 m; 1 `UNKNOWN` `ReadinessSnapshot`; work_log 2 transitions; หลัง submit `/today` open orders = 0 (SUBMITTED ถูกตัดจาก bootstrap) |
+| CI quality / integration jobs (baseline) | success (47s / 1m0s) | GitHub Actions run 29977349490, commit `8ae02f9` — pnpm resolution fixed (baseline ก่อน slice นี้) |
 | typecheck / lint / build / diff check | PASS (exit 0) | quality gate ใน repo ผ่าน |
 
 ## งานเร่งด่วนบน critical path
@@ -65,24 +69,24 @@ order fixture สำหรับทดสอบ happy path ใน browser
 | 1 | ตั้ง `AUTH_MODE=internal` ใน Vercel Production | ทีม deploy | DONE; env เก่า `AUTH_DEV_BYPASS`/`AUTH_SECRET` ถูกนำออก |
 | 2 | ยืนยัน network boundary ของ URL ที่จะใช้งานภายใน | เจ้าของบัญชี + ทีม | OPEN SECURITY EXCEPTION; Vercel URL ยัง public |
 | 3 | ทดสอบ API/readiness/sync โดยไม่ login | ทีมพัฒนา | DONE; HTTP 200/400 และ response shape ผ่าน |
-| 4 | ปิด Workflow UI `/today` และต่อ dashboard actions/navigation | ทีมพัฒนา | `/today`/bootstrap/readiness production smoke ผ่าน; fixture browser/UAT ยังรอใบงานเปิด |
+| 4 | ปิด Workflow UI `/today` และต่อ dashboard actions/navigation | ทีมพัฒนา | `/today` happy-path UAT ผ่านบน local DB ผ่าน guarded demo fixture; ยังเหลือ dashboard actions/navigation, offline queue, QR/photo |
 | 5 | หมุน Neon database credential ก่อน release | เจ้าของบัญชี + ทีม deploy | rotation timestamp และ redeploy result; ห้ามบันทึกค่า secret |
 | 6 | Redeploy และรัน QA/UAT gate | ทีมทั้งหมด | test totals, smoke results, known issues, rollback point |
 
 ## ข้อจำกัดและช่องว่างที่ยืนยันแล้ว (2026-07-23)
 
-- **เครื่องพัฒนาปัจจุบันไม่มี Docker และไม่มี psql** จึงรัน DB ในเครื่องไม่ได้ —
-  hands-on `/today` workflow UAT ยังต้องใช้ local/staging DB ที่ควบคุมได้ และ
-  **ห้ามสร้างใบงานปลอมใน production** เพื่อทดสอบ
-- **GPS >100m mandatory reason ยังไม่มี:** review flag ทำงาน แต่ *เหตุผลบังคับ*
-  เมื่อพิกัดห่างจากเสา >100m ยังไม่ถูกแทนใน schema/payload/UI → **UAT case 8 ใน
-  `docs/spec/06` ยังไม่ผ่าน**; ห้ามประกาศ QA/UAT DONE จนกว่าจะปิดช่องว่างนี้พร้อม test
-- **Next slice = จัดเตรียม safe test environment + demo fixture ที่ production-safe
-  และมี guard ชัดเจน** ก่อนเจ้าของทดสอบ `/today` — **ยังไม่ได้ทำ** อย่ารายงานว่าเสร็จ
-- **คงเดิม:** `AUTH_MODE=internal` เป็น owner-approved แต่การเปิด **public Vercel URL
-  ยังเป็น OPEN security exception** (ยังไม่ได้รับ owner acceptance) — ทุก caller ได้สิทธิ์
-  เต็ม ต้องจำกัด network หรือให้ owner ยอมรับอย่างชัดเจนในภายหลัง; และต้อง **rotate Neon
-  credential** ก่อน release
+- **Local Docker Desktop + PostGIS ใช้งานได้บนเครื่องนี้แล้ว** จึงรัน DB และ
+  `/today` workflow UAT ในเครื่องได้; guarded demo fixture (`pnpm db:seed:demo`)
+  เป็น local-`sos`-only + fail-closed จึง **ไม่สร้างใบงานปลอมใน production/Neon**
+- **GPS >100m mandatory reason ยังไม่ wiring:** คอลัมน์ `ChecklistResponse.locationReason`
+  **มีอยู่แล้ว** และ review flag ทำงาน แต่ *เหตุผลบังคับ* เมื่อพิกัดห่างจากเสา >100m ยังไม่มี
+  DTO/service/UI ที่เก็บ/บันทึก → **UAT case 8 ใน `docs/spec/06` ยังไม่ผ่าน**; เป็น wiring
+  slice ไม่ใช่ schema change; ห้ามประกาศ QA/UAT DONE จนกว่าจะปิดช่องว่างนี้พร้อม test
+- **Next slice = wire GPS >100m mandatory reason** (domain-first + tests) แล้วต่อ dashboard actions
+- **คงเดิม (security exceptions ยังเปิดอยู่):** `AUTH_MODE=internal` เป็น owner-approved
+  แต่การเปิด **public Vercel URL ยังเป็น OPEN security exception** (ยังไม่ได้รับ owner
+  acceptance) — ทุก caller ได้สิทธิ์เต็ม ต้องจำกัด network หรือให้ owner ยอมรับอย่างชัดเจน
+  ในภายหลัง; และต้อง **rotate Neon credential** ก่อน release **ยังไม่ production-ready**
 
 ## Definition of Done สำหรับ Production
 

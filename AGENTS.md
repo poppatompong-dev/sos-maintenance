@@ -23,20 +23,32 @@ Municipality). The core question it answers for executives: *which poles are
 ## Current state (keep this section honest as you work)
 - ✅ Sprint 1 (Foundation) · ✅ Sprint 2 (Domain layer) · ✅ Sprint 3 (UI + PWA) ·
   ✅ Sprint 4 (DB wiring)
-- **167 unit tests passing** + **41/41 DB-backed integration** (8 files) confirmed
-  green in CI (Actions run 29977349490, commit `8ae02f9`); `typecheck` / `lint` /
-  `build` / `git diff --check` green. CI pnpm version mismatch is **fixed** (DONE).
+- **182/182 unit tests passing** (22 files) + **43/43 DB-backed integration**
+  (9 files); `typecheck` / `lint` / `build` / `git diff --check` green. CI pnpm
+  version mismatch is **fixed** (DONE). (Prior CI-green baseline before this slice:
+  167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
 - App runs with `pnpm dev` → `/` (control-centre dashboard) and `/today`
   (technician field shell). Data is the true initial state: all 27 poles UNKNOWN
   until surveyed (computed, not faked).
-- **This machine has neither Docker nor psql**, so hands-on `/today` workflow UAT
-  still needs a controlled local/staging DB. **Never fabricate production work
-  orders.**
-- **Known gap:** GPS >100m review flag exists, but the *mandatory reason* is absent
-  from schema/payload/UI — UAT case 8 is **not** complete.
-- **Next slice:** provision a safe test environment and implement a
-  production-safe, explicitly guarded local demo fixture before the owner tests
-  `/today` (**not yet implemented**). Details in `docs/RESUME_HERE.md`.
+- **Local Docker Desktop + PostGIS is now healthy on this machine**, so hands-on
+  `/today` workflow UAT ran against a real local DB. **Never fabricate production
+  work orders** — the demo fixture is guarded, local-`sos`-only, and fail-closed.
+- **Guarded local demo fixture DONE:** `pnpm db:seed:demo` creates one idempotent
+  ASSIGNED demo work order `DEMO-LOCAL-EP01-MONTHLY` on EP01 (local `sos` DB only).
+  Browser `/today` happy path verified on `http://localhost:3100/today`: one
+  ASSIGNED demo with 10 real checklist items; `ASSIGNED→IN_PROGRESS` 200,
+  `POST /api/inspections` 201, transition to `SUBMITTED` 200, no console errors. DB
+  evidence: status `SUBMITTED` version 2, 10 responses under 1 `clientMutationId`,
+  distance 0 m, 1 `UNKNOWN` `ReadinessSnapshot`, two `work_log` transitions. After
+  submit, `/today` shows zero open work orders because `SUBMITTED` is excluded from
+  the open-order bootstrap — verify via API/DB, not a persistent pill. See
+  `docs/DEMO_RUNBOOK.md`.
+- **Known gap (still open):** `ChecklistResponse.locationReason` **already exists**
+  in the schema, but the GPS >100m *mandatory reason* DTO/service/UI wiring is
+  missing — UAT case 8 is **not** complete.
+- **Next slice:** with the guarded fixture in place, wire the GPS >100m mandatory
+  reason (domain-first, with tests) and dashboard actions. Details in
+  `docs/RESUME_HERE.md`.
 
 ## Code map
 ```
@@ -85,9 +97,11 @@ infra/          Docker, Caddy, Keycloak realm, backup
 ```
 pnpm dev            # app (/, /today)
 pnpm worker:dev     # background worker
-pnpm test           # 129 tests
+pnpm test           # 182 unit tests (DB-free)
+pnpm test:integration   # 43 DB-backed tests (need local sos PostGIS)
 pnpm typecheck | pnpm lint | pnpm build
 pnpm db:migrate | pnpm db:postgis | pnpm db:seed   # need Docker running
+pnpm db:seed:demo   # guarded local-only demo work order (see docs/DEMO_RUNBOOK.md)
 ```
 
 <!-- BEGIN:nextjs-agent-rules -->
@@ -122,11 +136,12 @@ infra/ — Docker config, Keycloak realm, backup scripts
 docs/ — Architecture (ARCHITECTURE.md), resume point (RESUME_HERE.md), tomorrow steps (START_TOMORROW.md), requirements (docs/spec/)
 
 Current Status:
-✅ Domain logic & readiness engine (129 tests passing)
+✅ Domain logic & readiness engine (182 unit tests passing, 22 files)
 ✅ UI shells (Dashboard A, Technician field app B)
-⏳ DB wiring & migrations (needs Docker)
-⏳ Auth enforcement (Keycloak setup done, policies pending)
-⏳ REST APIs, offline sync, reports (later sprints)
+✅ DB wiring & migrations (complete)
+✅ REST APIs & database wiring; guarded local demo fixture + /today happy-path UAT (complete)
+⏸️ Auth enforcement (Keycloak) — deferred; owner selected internal no-login mode
+⏳ Remaining: offline mutation queue, reports, dashboard actions, QR/photo, GPS >100m mandatory-reason wiring
 Prerequisites to Run Locally:
 
 Node 22+, pnpm 10+

@@ -5,6 +5,43 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-23 — Guarded local demo fixture + `/today` browser UAT (local PostGIS)
+
+**FACT:** Local Docker Desktop + PostGIS ใช้งานได้บนเครื่องนี้แล้ว. เพิ่ม guarded
+demo fixture: `prisma/demo-fixture-guard.ts` (pure, fail-closed), `demo-fixture.ts`
+(idempotent transaction), `seed-demo.ts` (CLI), tests, และ `docs/DEMO_RUNBOOK.md`;
+`package.json` เพิ่ม `db:seed:demo`. `pnpm db:seed:demo` รันครั้งแรก `created`
+ครั้งที่สอง `already present` (idempotent, local-`sos`-only, ไม่แตะ production/Neon).
+
+**DECISION:** ENGINEERING_LOOP queue item 4 (safe test env + guarded fixture) =
+**DONE**; item 5 (`/today` UAT happy path) = **DONE**. item 6 (GPS >100m reason) =
+NEXT. **ยังไม่ production-ready.**
+
+**NEXT:** wire GPS >100m mandatory reason (คอลัมน์ `ChecklistResponse.locationReason`
+มีอยู่แล้ว — ขาด DTO/service/UI wiring, domain-first + tests) → ปิด UAT case 8;
+แล้วต่อ dashboard actions.
+
+**BLOCKER:** security exceptions ยังเปิดอยู่ — public Vercel URL = OPEN security
+exception (ทุก caller ได้สิทธิ์เต็ม); ต้อง rotate Neon credential ก่อน release.
+
+**EVIDENCE:** `pnpm test` **182/182 (22 files)**; `pnpm test:integration`
+**43/43 (9 files)**; `pnpm typecheck` / `pnpm lint` / `pnpm build` /
+`git diff --check` exit 0. Browser UAT `http://localhost:3100/today`: demo หนึ่งใบ
+ASSIGNED + checklist จริง 10 รายการ; `ASSIGNED→IN_PROGRESS` 200,
+`POST /api/inspections` 201, transition → `SUBMITTED` 200, ไม่มี console error. DB:
+`WorkOrder.status=SUBMITTED` version 2; 10 `ChecklistResponse` ภายใต้ 1
+`clientMutationId`; distance 0 m; 1 `ReadinessSnapshot` = `UNKNOWN`; work_log 2
+transitions. หลัง submit `/today` open orders = 0 (SUBMITTED ถูกตัดจาก bootstrap;
+ยืนยันผ่าน API/DB ไม่ใช่ pill).
+
+**REVIEW:** guard ตรวจก่อนต่อ Prisma (confirmation, non-production, loopback host,
+db=`sos`) และไม่ echo connection string; fixture idempotent พิสูจน์ด้วย
+integration test ที่ใช้ `-ITEST` code แยกจาก demo จริง; ไม่แตะ `src/**`, schema,
+`seed.ts`, workflows. ช่องว่างที่ยังเปิด: GPS >100m wiring, public URL boundary,
+Neon rotation.
+
+---
+
 ## 2026-07-23 — CI pnpm mismatch fixed; DB integration confirmed green
 
 **FACT:** แก้ `.github/workflows/ci.yml` โดยลบ `version: 10` ที่ซ้ำออกจากทั้ง

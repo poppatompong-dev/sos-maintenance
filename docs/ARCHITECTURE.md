@@ -30,7 +30,7 @@ src/
     today/page.tsx        Technician B field shell      → /today
     offline/page.tsx      PWA offline fallback
     manifest.ts           PWA manifest
-  domain/                 ← pure, fully tested (129 tests live here + server)
+  domain/                 ← pure (the 182 DB-free unit tests span domain + server + the pure prisma demo guard)
     readiness/            the readiness engine + reason codes + critical functions
     recurrence/           weekly/monthly/semiannual next-due (Bangkok calendar)
     geo/                  haversine + 100m GPS-exception rule

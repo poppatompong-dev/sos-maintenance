@@ -68,9 +68,9 @@ NEXT SLICE
 | 1 | Internal no-login mode | production API no Authorization → 200; validation ยังทำงาน | DONE |
 | 2 | CI pnpm resolution | ลบ `version: 10` ที่ซ้ำ; `quality`+`integration` เขียว | DONE (run 29977349490, `8ae02f9`) |
 | 3 | Post-change DB integration | integration suite ผ่านหลัง internal-mode change | DONE (41/41, 8 files, ephemeral PostGIS) |
-| 4 | Safe test env + guarded demo fixture | จัดเตรียม local/staging DB; demo work order ที่ production-safe และมี guard ชัดเจน; ห้ามเขียนลง production | NEXT (ยังไม่ได้ทำ) |
-| 5 | Workflow UI `/today` UAT | ด้วย fixture บน non-production DB: start → checklist/GPS → submit → `SUBMITTED` | IN PROGRESS (รอ fixture) |
-| 6 | GPS >100m mandatory reason | reason ถูกแทนใน schema/payload/UI + tests → ปิด UAT case 8 | OPEN (gap ยืนยันแล้ว) |
+| 4 | Safe test env + guarded demo fixture | จัดเตรียม local/staging DB; demo work order ที่ production-safe และมี guard ชัดเจน; ห้ามเขียนลง production | DONE (local Docker PostGIS healthy; `pnpm db:seed:demo` fail-closed, local-`sos`-only, idempotent) |
+| 5 | Workflow UI `/today` UAT | ด้วย fixture บน non-production DB: start → checklist/GPS → submit → `SUBMITTED` | DONE (happy path) — browser UAT บน `localhost:3100/today` ผ่าน; ยังเหลือ dashboard actions / offline / QR / photo |
+| 6 | GPS >100m mandatory reason | wiring DTO/service/UI + tests (คอลัมน์ `ChecklistResponse.locationReason` มีอยู่แล้ว) → ปิด UAT case 8 | OPEN / NEXT (gap ยืนยันแล้ว) |
 | 7 | Dashboard actions | dashboard เรียกข้อมูล DB และเปิดรายละเอียด/งานได้จริง | QUEUED |
 | 8 | Security boundary | Vercel URL จำกัดเครือข่าย หรือบันทึก owner-approved exception | OPEN |
 | 9 | UAT/review | QA/UAT, rollback และ review ผ่านก่อนประกาศ complete | BLOCKED UNTIL 4–8 |
@@ -90,6 +90,28 @@ NEXT SLICE
   `DATABASE_URL`
 - ขอบเขตที่ยังไม่ทำใน slice นี้: QR scan, IndexedDB offline mutation queue,
   photo attachment และ dashboard actions
+
+### Current slice review — 2026-07-23 (guarded demo fixture + `/today` UAT)
+
+**REVIEW: PASS (happy path)** สำหรับ queue item 4 (fixture) และ item 5 (`/today` UAT)
+
+- Local Docker Desktop + PostGIS ใช้งานได้บนเครื่องนี้แล้ว; `pnpm db:seed:demo` เป็น
+  fail-closed (guard ตรวจ `LOCAL_DEMO_CONFIRM`, non-production, loopback host,
+  db=`sos` ก่อนต่อ Prisma) และ idempotent — รันครั้งแรก `created`, ครั้งที่สอง
+  `already present`; ไม่แตะ production/Neon
+- Browser UAT บน `http://localhost:3100/today`: demo หนึ่งใบสถานะ ASSIGNED พร้อม
+  checklist จริง 10 รายการ; `ASSIGNED→IN_PROGRESS` 200, `POST /api/inspections`
+  201, transition → `SUBMITTED` 200, ไม่มี console error
+- DB evidence: `WorkOrder.status=SUBMITTED` version 2, 10 `ChecklistResponse` ภายใต้
+  `clientMutationId` เดียว, distance 0 m (mock ที่ EP01), 1 `ReadinessSnapshot`
+  ค่า `UNKNOWN`, work_log 2 transitions
+- หลังส่งผลตรวจ `/today` แสดง open work orders = 0 อย่างถูกต้อง เพราะ bootstrap ตัด
+  `SUBMITTED` ออก — ยืนยันความสำเร็จผ่าน API/DB ไม่ใช่ pill ที่ค้างบนหน้าจอ
+- Gates: `pnpm test` 182/182 (22 files), `pnpm test:integration` 43/43 (9 files),
+  typecheck/lint/build/`git diff --check` exit 0
+- ยังไม่ปิด release: GPS >100m mandatory-reason wiring ยังไม่มี (คอลัมน์
+  `locationReason` มีอยู่แล้ว, item 6 = NEXT); public Vercel URL ยังเป็น OPEN security
+  exception; ต้อง rotate Neon credential ก่อน production. **ไม่ใช่ production-ready**
 
 ## Review checklist ก่อนเปลี่ยนเป็น DONE
 
