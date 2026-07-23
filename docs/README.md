@@ -35,6 +35,7 @@ state and the next step. This page maps everything else.
 (agent prompt) > prototype (visual reference only).
 
 ## Status at a glance
-- ✅ Sprint 1 Foundation · ✅ Sprint 2 Domain layer · IN PROGRESS Workflow UI
-- Tests: **167 passing**; typecheck / lint / build green locally.
-- Next: fix CI pnpm mismatch, verify ephemeral PostGIS integration, then continue UAT.
+- ✅ Sprint 1 Foundation · ✅ Sprint 2 Domain layer · ✅ Sprint 3 UI/PWA shell · ✅ Sprint 4 DB wiring · IN PROGRESS Workflow UI UAT
+- Tests: **167 unit passing** + **41/41 DB integration** green in CI (run 29977349490, commit `8ae02f9`); typecheck / lint / build / diff-check green. CI pnpm mismatch **fixed**.
+- Constraints: this machine has no Docker/psql (hands-on `/today` UAT needs a controlled local/staging DB — never fabricate production work orders); GPS >100m mandatory reason missing (UAT case 8 not complete).
+- Next: provision a safe test env + a production-safe, guarded local demo fixture (not yet implemented), then run `/today` UAT.

@@ -21,12 +21,22 @@ Municipality). The core question it answers for executives: *which poles are
 5. `docs/README.md` is the full index of all documentation.
 
 ## Current state (keep this section honest as you work)
-- ✅ Sprint 1 (Foundation) · ✅ Sprint 2 (Domain layer) · ✅ Sprint 3 (UI + PWA)
-- **129 tests passing**; `typecheck` / `lint` / `build` green.
+- ✅ Sprint 1 (Foundation) · ✅ Sprint 2 (Domain layer) · ✅ Sprint 3 (UI + PWA) ·
+  ✅ Sprint 4 (DB wiring)
+- **167 unit tests passing** + **41/41 DB-backed integration** (8 files) confirmed
+  green in CI (Actions run 29977349490, commit `8ae02f9`); `typecheck` / `lint` /
+  `build` / `git diff --check` green. CI pnpm version mismatch is **fixed** (DONE).
 - App runs with `pnpm dev` → `/` (control-centre dashboard) and `/today`
   (technician field shell). Data is the true initial state: all 27 poles UNKNOWN
   until surveyed (computed, not faked).
-- **Next: Sprint 4 = DB wiring** (needs Docker). Details in `docs/RESUME_HERE.md`.
+- **This machine has neither Docker nor psql**, so hands-on `/today` workflow UAT
+  still needs a controlled local/staging DB. **Never fabricate production work
+  orders.**
+- **Known gap:** GPS >100m review flag exists, but the *mandatory reason* is absent
+  from schema/payload/UI — UAT case 8 is **not** complete.
+- **Next slice:** provision a safe test environment and implement a
+  production-safe, explicitly guarded local demo fixture before the owner tests
+  `/today` (**not yet implemented**). Details in `docs/RESUME_HERE.md`.
 
 ## Code map
 ```

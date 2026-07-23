@@ -29,33 +29,42 @@ Codex is near its context limit. Continue from this file, then read
 - Normal CI integration should use the ephemeral PostGIS service in
   `.github/workflows/ci.yml`; it does not need the Neon secret.
 
-## BLOCKER FOUND
+## BLOCKER FOUND — RESOLVED (2026-07-23)
 
-GitHub Actions run
-`https://github.com/poppatompong-dev/sos-maintenance/actions/runs/29918222990`
-failed before tests because `pnpm/action-setup@v4` has `version: 10`, while
-`package.json` pins `packageManager: pnpm@10.34.5`.
-
-This is a CI configuration mismatch, not a missing database secret. Fix the
-workflow to use the exact pinned version `10.34.5` (or otherwise remove the
-duplicate version declaration), then push and verify both `quality` and
-`integration` jobs. Keep the existing integration order:
+The prior CI failure (run `29918222990`) was a pnpm configuration mismatch:
+`pnpm/action-setup@v4` had `version: 10` while `package.json` pins
+`packageManager: pnpm@10.34.5`. **Fixed in commit `8ae02f9`** by removing the
+duplicate `version:` declaration from both jobs so action-setup reads the pin.
+GitHub Actions run **29977349490** is green: `quality` success (47s),
+`integration` success (1m0s) with **41/41 integration tests in 8 files** on the
+ephemeral PostGIS service. The integration order is unchanged:
 
 ```text
 prisma generate → pnpm db:setup → pnpm test:integration
 ```
 
+### New known gap (do not fix silently; plan a slice)
+
+GPS >100m review flag exists, but the **mandatory reason** for a position >100m
+from the asset is **absent from schema/payload/UI**, so **UAT case 8
+(`docs/spec/06`) is not complete**. This machine also has **no Docker/psql**, so
+hands-on `/today` UAT needs a controlled local/staging DB — never fabricate a
+production work order.
+
 ## NEXT
 
-1. Fix the pnpm version mismatch in `.github/workflows/ci.yml`.
-2. Run local quality gates and push; inspect the new GitHub Actions run.
-3. If CI passes, record the integration test total in the checkpoint.
-4. For `/today` happy-path UAT, use a controlled non-production fixture or wait
+1. **Next slice:** provision a safe local/staging test DB, then implement a
+   **production-safe, explicitly guarded** local demo work-order fixture so the
+   owner can exercise `/today`. **Not yet implemented** — do not claim it is, and
+   never write a demo/fabricated work order to production.
+2. For `/today` happy-path UAT, use that controlled non-production fixture or wait
    until the municipality creates a real work order: start → checklist/GPS →
    submit → `SUBMITTED`.
-5. Keep public Vercel + no-login as a security exception until a private
+3. Close the GPS >100m mandatory-reason gap in schema/payload/UI (domain first,
+   with tests) to complete UAT case 8.
+4. Keep public Vercel + no-login as a security exception until a private
    network boundary is established or explicitly accepted by the owner.
-6. Neon credential rotation remains a release gate because the original
+5. Neon credential rotation remains a release gate because the original
    credential was exposed during setup; handle it only through the account UI
    or a secure local environment.
 

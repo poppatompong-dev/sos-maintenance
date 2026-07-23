@@ -5,6 +5,37 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-23 — CI pnpm mismatch fixed; DB integration confirmed green
+
+**FACT:** แก้ `.github/workflows/ci.yml` โดยลบ `version: 10` ที่ซ้ำออกจากทั้ง
+`quality` และ `integration` job ให้ `pnpm/action-setup@v4` อ่าน
+`packageManager: pnpm@10.34.5` จาก `package.json` (คงลำดับ job และ PostGIS service
+เดิม). Commit `8ae02f9`.
+
+**DECISION:** CI pnpm mismatch = **DONE**; post-change DB integration = **DONE**.
+Sprint 4 (DB wiring) ปิดงานได้ตาม integration evidence.
+
+**EVIDENCE:** GitHub Actions run 29977349490 — `quality` success (47s),
+`integration` success (1m0s) โดย integration **41/41 tests ผ่านใน 8 files** (3.89s);
+local `pnpm test` 167/167 (21 files), `pnpm typecheck` / `pnpm lint` / `pnpm build`
+/ `git diff --check` exit 0.
+
+**BLOCKER / ข้อจำกัดที่บันทึกไว้ตามจริง:**
+- เครื่องนี้**ไม่มี Docker และไม่มี psql** — hands-on `/today` workflow UAT ยังต้อง
+  ใช้ local/staging DB ที่ควบคุมได้ และ**ห้ามสร้างใบงานปลอมใน production**
+- **GPS >100m gap ที่ยืนยันแล้ว:** review flag มีอยู่ แต่ *เหตุผลบังคับ (mandatory
+  reason)* ยังไม่มีใน schema/payload/UI → **UAT case 8 ยังไม่ผ่าน**
+- Security exception เดิมยังคงอยู่: `AUTH_MODE=internal` เป็น owner-approved แต่
+  **public Vercel URL ยังเป็น OPEN security exception** (ยังไม่ได้ owner acceptance) ต้อง
+  จำกัด network หรือให้ owner ยอมรับอย่างชัดเจนภายหลัง; และต้อง **rotate Neon credential**
+  ก่อน release
+
+**NEXT:** slice ถัดไป = จัดเตรียม safe test environment และ implement demo fixture
+ที่ production-safe และ**มี guard ชัดเจน** ก่อนให้เจ้าของทดสอบ `/today` — **ยังไม่ได้
+ทำ** อย่ารายงานว่าเสร็จ
+
+---
+
 ## 2026-07-23 — Prepared cross-session/account handoff
 
 **FACT:** เพิ่ม `SESSION_HANDOFF_CODEX.md` สำหรับเปิด Codex session ใหม่หรือเปลี่ยน

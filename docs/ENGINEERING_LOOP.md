@@ -66,11 +66,14 @@ NEXT SLICE
 | ลำดับ | Slice | Acceptance criteria | สถานะ |
 |---:|---|---|---|
 | 1 | Internal no-login mode | production API no Authorization → 200; validation ยังทำงาน | DONE |
-| 2 | Workflow UI `/today` | bootstrap มี work-order id; online เริ่มงาน/ส่งผลตรวจ/refresh sync ทำงานจริง | IN PROGRESS |
-| 3 | Dashboard actions | dashboard เรียกข้อมูล DB และเปิดรายละเอียด/งานได้จริง | NEXT |
-| 4 | Post-change DB integration | integration suite ผ่านหลัง internal-mode change | PENDING |
-| 5 | Security boundary | Vercel URL จำกัดเครือข่าย หรือบันทึก owner-approved exception | OPEN |
-| 6 | UAT/review | QA/UAT, rollback และ review ผ่านก่อนประกาศ complete | BLOCKED UNTIL 2–5 |
+| 2 | CI pnpm resolution | ลบ `version: 10` ที่ซ้ำ; `quality`+`integration` เขียว | DONE (run 29977349490, `8ae02f9`) |
+| 3 | Post-change DB integration | integration suite ผ่านหลัง internal-mode change | DONE (41/41, 8 files, ephemeral PostGIS) |
+| 4 | Safe test env + guarded demo fixture | จัดเตรียม local/staging DB; demo work order ที่ production-safe และมี guard ชัดเจน; ห้ามเขียนลง production | NEXT (ยังไม่ได้ทำ) |
+| 5 | Workflow UI `/today` UAT | ด้วย fixture บน non-production DB: start → checklist/GPS → submit → `SUBMITTED` | IN PROGRESS (รอ fixture) |
+| 6 | GPS >100m mandatory reason | reason ถูกแทนใน schema/payload/UI + tests → ปิด UAT case 8 | OPEN (gap ยืนยันแล้ว) |
+| 7 | Dashboard actions | dashboard เรียกข้อมูล DB และเปิดรายละเอียด/งานได้จริง | QUEUED |
+| 8 | Security boundary | Vercel URL จำกัดเครือข่าย หรือบันทึก owner-approved exception | OPEN |
+| 9 | UAT/review | QA/UAT, rollback และ review ผ่านก่อนประกาศ complete | BLOCKED UNTIL 4–8 |
 
 ### Current slice review — 2026-07-22
 
