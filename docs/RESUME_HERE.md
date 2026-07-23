@@ -5,7 +5,17 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-23 (guarded local demo fixture DONE + `/today` browser UAT verified on local PostGIS)._
+_Last updated: 2026-07-23 (end-of-day handoff — flexible field checklist design **owner-approved** and its **implementation plan is complete**; **no implementation started today**)._
+
+## ▶ Next slice is planned and ready to execute
+The **flexible field checklist** is the next ordered slice. Its design is
+**owner-approved** and its implementation plan is **complete** — but **no code has
+been written yet**. Read both before touching anything:
+- **Approved design:** [`docs/superpowers/specs/2026-07-23-flexible-field-checklist-design.md`](superpowers/specs/2026-07-23-flexible-field-checklist-design.md)
+- **Implementation plan (execute from Task 1, in order):** [`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`](superpowers/plans/2026-07-23-flexible-field-checklist.md)
+
+The approved design was committed as `762ce3d` (`docs: design flexible field
+checklist`). It is the plan's base commit.
 
 **ดูสถานะ milestone และหลักฐานล่าสุด:** [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md)
 
@@ -24,20 +34,20 @@ _Last updated: 2026-07-23 (guarded local demo fixture DONE + `/today` browser UA
   shells rendering the *true* initial state (27 poles UNKNOWN until surveyed).
 
 ## Get running
-**On this (home) machine** — code is at `C:\dev\sos-maintenance`:
+**On this machine** — the current workspace is `D:\sos-maintenance`:
 ```powershell
-cd C:\dev\sos-maintenance
+cd D:\sos-maintenance
 git pull
 pnpm install          # if deps changed
-pnpm test             # confirm green
-pnpm dev              # http://localhost:3000
+pnpm test             # confirm green (baseline 182 unit tests, 22 files)
+pnpm dev -- -p 3100   # http://localhost:3100  (see port note below)
 ```
-**On a NEW machine (work PC):** follow `docs/DEVELOPING.md` →
-```powershell
-git clone https://github.com/poppatompong-dev/sos-maintenance.git C:\dev\sos-maintenance
-cd C:\dev\sos-maintenance
-pwsh ./scripts/bootstrap.ps1
-```
+**On a NEW machine:** follow `docs/DEVELOPING.md`, then clone to a local path and
+run `pwsh ./scripts/bootstrap.ps1`.
+
+> **Port note (do not get this wrong):** this SOS app uses **port 3100**. Port
+> **3000 belongs to the unrelated `thai-memo-app`** and must **not** be touched.
+> All local browser/demo checks use `http://localhost:3100`.
 
 ## ✅ DB verification complete / CI integration green
 The DB-backed integration suite passes **41/41 in 8 files** on CI's ephemeral
@@ -65,20 +75,37 @@ represented and tested. This is a wiring slice, not a schema change.
    → `SUBMITTED`, verified in-browser on the local DB (evidence above). Still
    remaining in this area: wire dashboard actions to real
    inspection/sync/fault/work-order flows, plus offline queue / QR / photo.
-3. **GPS >100m reason (next slice):** the `ChecklistResponse.locationReason` column
-   already exists — add the missing DTO/service/UI wiring (domain first, with
-   tests) to collect and persist the mandatory reason and close UAT case 8.
-4. **Security boundary:** `AUTH_MODE=internal` itself is owner-approved, but the
+3. **Flexible field checklist (NEXT — design owner-approved, plan complete, not
+   started).** Execute
+   [`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`](superpowers/plans/2026-07-23-flexible-field-checklist.md)
+   from **Task 1 in order**, test-first, in small vertical commits with Codex
+   review between meaningful tasks. It turns the monthly field inspection into
+   five outcome-oriented Thai groups (plus one optional note) defined entirely by
+   versioned data, with a pure server-authoritative canonicalization — no
+   readiness/auth/offline change. This slice does **not** close UAT case 8 (below)
+   and does **not** claim the QA/UAT gate.
+4. **GPS >100m reason (after the checklist slice):** the
+   `ChecklistResponse.locationReason` column already exists — add the missing
+   DTO/service/UI wiring (domain first, with tests) to collect and persist the
+   mandatory reason and close **UAT case 8**. Still an open release blocker.
+5. **Security boundary:** `AUTH_MODE=internal` itself is owner-approved, but the
    **public Vercel URL remains an OPEN security exception** — every reachable
    caller gets full permissions. It must be restricted to the municipality's
    internal network / private access layer, or explicitly accepted by the owner
    in a future decision. It is **not** resolved and not yet owner-accepted.
-5. **Security:** rotate the Neon password/connection secret before production,
-   because the credential was exposed during setup communication.
-6. **Release gate:** redeploy, run runtime smoke tests, then complete
+6. **Security:** rotate the Neon password/connection secret before production,
+   because the credential was exposed during setup communication. Never print or
+   store the secret; no production/Neon writes.
+7. **Release gate:** redeploy, run runtime smoke tests, then complete
    `docs/spec/06_DELIVERY_QA_UAT.md` with the internal-mode exception recorded.
-7. **Later product depth:** reports, online MapLibre map (accessible list fallback
+8. **Later product depth:** reports, online MapLibre map (accessible list fallback
    already built), and optional Keycloak mode if policy changes.
+
+**Docker safety (local only):** the dev compose declares **two** named volumes,
+`db-data` **and** `keycloak-data`. **Never run `docker compose down -v`** — it
+would destroy both. If a DB reset is genuinely required, follow the plan's
+**Task 14** fail-closed procedure that removes only the literal
+`sos-maintenance_db-data` volume and **never** removes `keycloak-data`.
 
 ## Map of the code
 - `src/domain/**` — pure business logic (readiness, recurrence, geo, work state

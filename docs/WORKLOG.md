@@ -5,6 +5,43 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-23 — Flexible field checklist: design approved + plan complete (docs-only handoff)
+
+**FACT:** Design ของ flexible field checklist ได้รับ **owner approval** และ
+**implementation plan เสร็จสมบูรณ์แล้ว** — แต่ **ยังไม่เริ่มลงมือ implement วันนี้**
+(ยังไม่มีการแตะ code / schema / config / tests). งานวันนี้เป็น **docs-only**:
+ปรับ end-of-day handoff (`RESUME_HERE.md`, `START_TOMORROW.md`, `WORKLOG.md`) ให้
+ชี้ slice ถัดไปเป็น flexible field checklist ก่อนกลับไปทำ GPS >100m reason wiring,
+แก้ path/port ที่ล้าสมัย (workspace ปัจจุบัน = `D:\sos-maintenance`, แอปใช้ port
+**3100**; port 3000 เป็นของ `thai-memo-app` ที่ไม่เกี่ยวข้อง ห้ามแตะ), และย้ำ Docker
+volume safety.
+
+**DECISION:** slice ถัดไป = **flexible field checklist** (รัน
+`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md` จาก Task 1 ตามลำดับ,
+test-first, commit ย่อย, Codex review คั่นระหว่าง task) แล้วจึงกลับไป GPS >100m
+mandatory reason. Release blockers ทั้งหมดยังคงเปิดอยู่: **UAT case 8** (GPS >100m
+reason), **public internal-mode Vercel URL** exposure, **Neon secret rotation**, และ
+**final QA/UAT + redeploy**. ยังไม่ production-ready.
+
+**EVIDENCE:** approved design commit **`762ce3d`** (`docs: design flexible field
+checklist`); plan path **`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`**.
+Baseline ที่วัดไว้ (ไม่ได้รันซ้ำวันนี้ เพราะเป็น docs-only): `pnpm test`
+**182 passing (22 files)**, `pnpm test:integration` **43/43 (9 files)**. **ไม่มีการ
+รัน runtime test สำหรับการแก้เอกสารรอบปิดวันนี้** — อย่ารายงานว่ารัน test แล้ว.
+
+**NEXT:** session ถัดไปอ่าน AGENTS.md + RESUME + WORKLOG + approved design + plan,
+แล้ว execute plan จาก Task 1 (test-first, small vertical commits); ใช้ local
+Docker/PostGIS เท่านั้น (integration shell ปล่อย `AUTH_MODE`/`AUTH_DEV_BYPASS` ว่าง),
+app port 3100 เท่านั้น.
+
+**BLOCKER:** UAT case 8 (GPS >100m reason) ยังไม่ปิด; public Vercel URL ยังเป็น OPEN
+security exception; ต้อง rotate Neon credential ก่อน release; final QA/UAT +
+redeploy ยังไม่ทำ. Docker: มี volume `db-data` และ `keycloak-data` — **ห้าม
+`docker compose down -v`**; ถ้าต้อง reset ให้ตาม Task 14 (ลบเฉพาะ literal
+`sos-maintenance_db-data`, ไม่แตะ `keycloak-data`).
+
+---
+
 ## 2026-07-23 — Guarded local demo fixture + `/today` browser UAT (local PostGIS)
 
 **FACT:** Local Docker Desktop + PostGIS ใช้งานได้บนเครื่องนี้แล้ว. เพิ่ม guarded
