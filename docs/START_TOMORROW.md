@@ -8,6 +8,10 @@
 
 Repo (ส่วนตัว): **https://github.com/poppatompong-dev/sos-maintenance**
 
+> **Checkpoint ปัจจุบัน (2026-07-23):** เอกสารนี้มี prompt รุ่นเก่าเพื่อเป็นประวัติ
+> ให้เริ่มจาก `docs/RESUME_HERE.md` และ `docs/SESSION_HANDOFF_CODEX.md` เสมอ
+> งานปัจจุบันอยู่หลัง DB wiring แล้ว: แก้ CI pnpm mismatch และตรวจ UAT ต่อ
+
 ---
 
 ## อะไร "เดินทาง" ไปกับคุณ / อะไร "ไม่ไป"
@@ -59,7 +63,7 @@ pnpm dev
 #   → http://localhost:3000/today  หน้าเจ้าหน้าที่ภาคสนาม (PWA)
 
 # 4. ยืนยันว่าทุกอย่างปกติ
-pnpm test        # ควรได้ 129 ผ่าน
+pnpm test        # ควรได้ 167 ผ่าน
 ```
 
 ---
@@ -79,8 +83,8 @@ git add -A && git commit -m "อธิบายสั้น ๆ" && git push   #
 
 - เสร็จแล้ว: **Sprint 1 (ฐานราก) + 2 (domain logic) + 3 (UI + PWA)** — 129 tests ผ่าน
 - แอปเปิดดูได้จริงที่ `/` และ `/today` (แสดงสถานะจริง: 27 จุดยัง "ยังไม่ทราบ" เพราะยังไม่ได้สำรวจ)
-- **ก้าวถัดไป (Sprint 4):** ติดตั้ง Docker แล้วต่อฐานข้อมูลจริง — รายละเอียดเรียงลำดับอยู่ใน
-  **`docs/RESUME_HERE.md`** (เปิดไฟล์นี้เป็นอันดับแรกเสมอ)
+- **ก้าวถัดไปปัจจุบัน:** แก้ pnpm mismatch ใน CI, ตรวจ integration บน PostGIS ชั่วคราว,
+  แล้วทำ UAT `/today` เมื่อมีใบงานจริง — รายละเอียดอยู่ใน `docs/RESUME_HERE.md`
 
 ไม่ต้องรีบครับ พักผ่อนให้เต็มที่ งานรออยู่บน GitHub ครบถ้วน 🌙
 

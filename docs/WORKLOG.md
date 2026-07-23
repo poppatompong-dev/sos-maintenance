@@ -5,6 +5,23 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-23 — Prepared cross-session/account handoff
+
+**FACT:** เพิ่ม `SESSION_HANDOFF_CODEX.md` สำหรับเปิด Codex session ใหม่หรือเปลี่ยน
+บัญชีโดยใช้ GitHub เป็นแหล่งความจริง และปรับ `START_TOMORROW.md`/`README.md` ที่ยัง
+แสดงสถานะเก่า 129 tests กับ Sprint 4 เป็นงานถัดไป ทั้งที่ปัจจุบันมี 167 tests และ
+อยู่ช่วง Workflow UI/CI verification แล้ว
+
+**DECISION:** เปลี่ยนบัญชี Codex ได้หลัง push checkpoint แต่ต้องตรวจ GitHub access,
+workspace เดิม และติดตั้ง `codex-claude-loop` ใน Windows profile ใหม่ถ้าจำเป็น
+บทสนทนาเดิมและ context ของ session ไม่ใช่แหล่งความจริงหลัก
+
+**NEXT:** session ใหม่อ่าน `RESUME_HERE.md` → `SESSION_HANDOFF_CODEX.md` →
+`HANDOFF_CLAUDE.md`; จากนั้นแก้ pnpm mismatch ใน CI และตรวจ quality/integration
+ต่อ โดยไม่นำ secret ไปแชตหรือ commit
+
+---
+
 ## 2026-07-22 — Workflow UI `/today` slice implemented
 
 **FACT:** พบ root cause ว่า `GET /api/sync/bootstrap` ส่งเฉพาะ work-order code แต่

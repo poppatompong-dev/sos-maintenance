@@ -9,6 +9,9 @@ _Last updated: 2026-07-22 (production verification and roadmap checkpoint)._
 
 **ดูสถานะ milestone และหลักฐานล่าสุด:** [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md)
 
+**เปิด Codex session ใหม่/เปลี่ยนบัญชี:** อ่าน [`SESSION_HANDOFF_CODEX.md`](SESSION_HANDOFF_CODEX.md)
+แล้วส่งต่อ [`HANDOFF_CLAUDE.md`](HANDOFF_CLAUDE.md) ให้ Claude Code
+
 ## Where we are
 - **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ — implementation is in the working tree and the DB-backed integration gate is green.
 - **Tests:** `pnpm test` → **167 passing**; the prior DB-backed integration gate was **41 passing** against Neon. After the internal-mode change, local integration rerun is pending because this machine has no `DATABASE_URL`. `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green.

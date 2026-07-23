@@ -7,7 +7,8 @@ Codex is near its context limit. Continue from this file, then read
 ## FACT
 
 - Repository: `D:\sos-maintenance`, branch `main`.
-- Before this handoff, worktree was clean at commit `1a88bb0`.
+- The implementation checkpoint was clean at commit `1a88bb0`; newer commits may
+  contain only handoff/checkpoint documentation, so always run `git log -5` first.
 - `/today` workflow code is in `src/components/TodayWorkspace.tsx`.
 - `GET /api/sync/bootstrap` now includes the work-order database `id`; the UI
   can load work, start `ASSIGNED/REOPENED` work, capture checklist + GPS, submit

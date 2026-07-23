@@ -10,6 +10,7 @@ state and the next step. This page maps everything else.
 | [ROADMAP_CHECKPOINT.md](ROADMAP_CHECKPOINT.md) | สถานะ milestone, หลักฐาน runtime, blocker และงานถัดไปแบบดูได้ทันที |
 | [GO_LIVE_HANDOFF.md](GO_LIVE_HANDOFF.md) | แผน 30 นาทีสุดท้ายและ handoff ให้ทีมทำงานต่อหลังเจ้าของกลับบ้าน |
 | [ENGINEERING_LOOP.md](ENGINEERING_LOOP.md) | วงรอบพัฒนา ตรวจสอบ review และ recovery ที่ทีมต้องใช้ร่วมกัน |
+| [SESSION_HANDOFF_CODEX.md](SESSION_HANDOFF_CODEX.md) | เปิด Codex session ใหม่หรือย้ายบัญชีโดยไม่หลุดบริบท |
 | [START_TOMORROW.md](START_TOMORROW.md) | Continue from **another machine**; ready-to-use prompts for each next task. |
 | [PORTABLE_USB.md](PORTABLE_USB.md) | Copy the whole project to a **flash drive** and work offline (no git needed). |
 | [WORKLOG.md](WORKLOG.md) | Chronological history + why each decision was made. |
@@ -34,6 +35,6 @@ state and the next step. This page maps everything else.
 (agent prompt) > prototype (visual reference only).
 
 ## Status at a glance
-- ✅ Sprint 1 Foundation · ✅ Sprint 2 Domain layer · ✅ Sprint 3 UI + PWA
-- Tests: **129 passing**; typecheck / lint / build green.
-- Next: **Sprint 4 — DB wiring** (needs Docker). See RESUME_HERE.
+- ✅ Sprint 1 Foundation · ✅ Sprint 2 Domain layer · IN PROGRESS Workflow UI
+- Tests: **167 passing**; typecheck / lint / build green locally.
+- Next: fix CI pnpm mismatch, verify ephemeral PostGIS integration, then continue UAT.
