@@ -66,4 +66,3 @@ prisma generate → pnpm db:setup → pnpm test:integration
   queue, photo attachments, or dashboard actions.
 - Do not mark production complete from build/CI alone; require runtime and UAT
   evidence according to `docs/spec/06_DELIVERY_QA_UAT.md`.
-
