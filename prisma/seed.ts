@@ -2,6 +2,7 @@ import {
   PrismaClient,
   Criticality,
   ChecklistItemKind,
+  ChecklistVersionStatus,
   MaintenanceKind,
   RecurrenceFrequency,
   AssetLifecycleStatus,
@@ -204,15 +205,17 @@ async function main() {
       create: {
         templateId: template.id,
         version: 1,
+        status: ChecklistVersionStatus.PUBLISHED,
         publishedAt: new Date(),
-        isLocked: false,
+        isLocked: true,
       },
     });
     versionIdByKey.set(cl.key, version.id);
 
-    // Seed versions are never locked; refresh items so re-seed stays in sync.
-    if (!version.isLocked) {
-      await prisma.checklistItem.deleteMany({ where: { versionId: version.id } });
+    // Published versions are immutable: seed items only when the version has none
+    // (idempotent create; a re-seed never rewrites a frozen version's items).
+    const itemCount = await prisma.checklistItem.count({ where: { versionId: version.id } });
+    if (itemCount === 0) {
       await prisma.checklistItem.createMany({
         data: cl.items.map((it, i) => ({
           versionId: version.id,
