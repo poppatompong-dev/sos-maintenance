@@ -9,27 +9,55 @@ export const gpsSchema = z.object({
   lng: z.number().min(-180).max(180),
 });
 
-export const responseResultSchema = z.enum(['PASS', 'FAIL', 'NA', 'UNKNOWN']);
-
-export const evaluatedResponseSchema = z.object({
-  itemCode: z.string().min(1),
-  label: z.string().min(1),
-  result: responseResultSchema,
-  criticality: z.enum(['CRITICAL', 'NON_CRITICAL']),
-  criticalFunctionKey: z.string().optional(),
-});
-
 export const attachmentManifestItemSchema = z.object({
   name: z.string().min(1),
   checksumSha256: z.string().min(1),
   storageKey: z.string().optional(),
 });
 
-export const inspectionPayloadSchema = z.object({
-  workOrderId: z.string().min(1),
-  responses: z.array(evaluatedResponseSchema).min(1),
-  gps: gpsSchema,
+export const groupOutcomeSchema = z.enum(['NORMAL', 'PROBLEM', 'UNTESTABLE']);
+export const memberStateSchema = z.enum(['OK', 'PROBLEM', 'UNTESTED']);
+
+export const submittedMemberSchema = z.object({
+  memberKey: z.string().min(1),
+  state: memberStateSchema,
 });
+
+export const submittedGroupSchema = z.object({
+  groupKey: z.string().min(1),
+  outcome: groupOutcomeSchema,
+  members: z.array(submittedMemberSchema).optional(),
+  note: z.string().optional(),
+  reason: z.string().optional(),
+});
+
+export const fieldInspectionPayloadSchema = z
+  .object({
+    workOrderId: z.string().min(1),
+    groups: z.array(submittedGroupSchema).min(1),
+    generalNote: z.string().optional(),
+    gps: gpsSchema,
+  })
+  .superRefine((val, ctx) => {
+    // Reject duplicate group keys across the payload and duplicate member keys
+    // within a group (defence in depth alongside the domain canonicalizer).
+    const groupKeys = new Set<string>();
+    for (const g of val.groups) {
+      if (groupKeys.has(g.groupKey)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['groups'], message: `duplicate groupKey: ${g.groupKey}` });
+      }
+      groupKeys.add(g.groupKey);
+      const memberKeys = new Set<string>();
+      for (const m of g.members ?? []) {
+        if (memberKeys.has(m.memberKey)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['groups'], message: `duplicate memberKey: ${m.memberKey}` });
+        }
+        memberKeys.add(m.memberKey);
+      }
+    }
+  });
+
+export type FieldInspectionPayload = z.infer<typeof fieldInspectionPayloadSchema>;
 
 export const mutationEnvelopeSchema = z.object({
   mutationId: z.string().uuid(),
@@ -43,5 +71,4 @@ export const mutationEnvelopeSchema = z.object({
   attachments: z.array(attachmentManifestItemSchema).optional(),
 });
 
-export type InspectionPayload = z.infer<typeof inspectionPayloadSchema>;
 export type GpsInput = z.infer<typeof gpsSchema>;

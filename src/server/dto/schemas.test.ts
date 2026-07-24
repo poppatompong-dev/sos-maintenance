@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   gpsSchema,
-  inspectionPayloadSchema,
+  fieldInspectionPayloadSchema,
   mutationEnvelopeSchema,
 } from './schemas';
 
@@ -14,25 +14,70 @@ describe('gpsSchema', () => {
   });
 });
 
-describe('inspectionPayloadSchema', () => {
-  it('requires at least one response', () => {
-    const r = inspectionPayloadSchema.safeParse({
+describe('fieldInspectionPayloadSchema', () => {
+  it('requires at least one group', () => {
+    const r = fieldInspectionPayloadSchema.safeParse({
       workOrderId: 'wo-1',
-      responses: [],
+      groups: [],
       gps: { lat: 15.7, lng: 100.1 },
     });
     expect(r.success).toBe(false);
   });
 
-  it('accepts a valid payload', () => {
-    const r = inspectionPayloadSchema.safeParse({
+  it('accepts a valid NORMAL group payload with an optional general note', () => {
+    const r = fieldInspectionPayloadSchema.safeParse({
       workOrderId: 'wo-1',
-      responses: [
-        { itemCode: 'm_sos_button', label: 'ปุ่ม SOS', result: 'PASS', criticality: 'CRITICAL' },
-      ],
+      groups: [{ groupKey: 'g_power', outcome: 'NORMAL' }],
+      generalNote: 'ปกติดี',
       gps: { lat: 15.7, lng: 100.1 },
     });
     expect(r.success).toBe(true);
+  });
+
+  it('accepts a PROBLEM group with member states and a note', () => {
+    const r = fieldInspectionPayloadSchema.safeParse({
+      workOrderId: 'wo-1',
+      groups: [{
+        groupKey: 'g_audio',
+        outcome: 'PROBLEM',
+        members: [{ memberKey: 'm_microphone', state: 'PROBLEM' }],
+        note: 'ไมค์เสีย',
+      }],
+      gps: { lat: 15.7, lng: 100.1 },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejects an unknown outcome token', () => {
+    const r = fieldInspectionPayloadSchema.safeParse({
+      workOrderId: 'wo-1',
+      groups: [{ groupKey: 'g', outcome: 'PASS' }],
+      gps: { lat: 15.7, lng: 100.1 },
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects a duplicate group key', () => {
+    const r = fieldInspectionPayloadSchema.safeParse({
+      workOrderId: 'wo-1',
+      groups: [{ groupKey: 'g_audio', outcome: 'NORMAL' }, { groupKey: 'g_audio', outcome: 'NORMAL' }],
+      gps: { lat: 15.7, lng: 100.1 },
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects a duplicate member key within a group', () => {
+    const r = fieldInspectionPayloadSchema.safeParse({
+      workOrderId: 'wo-1',
+      groups: [{
+        groupKey: 'g_audio',
+        outcome: 'PROBLEM',
+        members: [{ memberKey: 'm_mic', state: 'OK' }, { memberKey: 'm_mic', state: 'PROBLEM' }],
+        note: 'x',
+      }],
+      gps: { lat: 15.7, lng: 100.1 },
+    });
+    expect(r.success).toBe(false);
   });
 });
 
