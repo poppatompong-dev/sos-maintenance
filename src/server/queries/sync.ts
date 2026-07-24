@@ -2,18 +2,26 @@ import type { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../db/client';
 
 /**
- * Offline sync bootstrap (doc 04, ADR 0004): everything a technician needs to
- * work their assigned jobs offline — the open work orders assigned to them, each
- * with its asset and the exact checklist item definitions to render. The field
- * PWA caches this, then queues mutations via POST /api/inspections.
+ * Offline sync bootstrap (doc 04, ADR 0004): each open work order with its asset
+ * and the pinned version's FIELD GROUPS to render. Display-safe only — no item
+ * kind, criticality, or critical-function key ever leaves the server here.
  */
-export interface SyncChecklistItem {
-  code: string;
+export interface SyncFieldGroupMember {
+  /** Opaque round-trip identifier (the item code); never displayed. */
+  memberKey: string;
   label: string;
-  kind: string;
-  criticality: string;
-  criticalFunctionKey: string | null;
-  requiresPhoto: boolean;
+}
+
+export interface SyncFieldGroup {
+  /** Opaque identifier; never displayed. */
+  key: string;
+  label: string;
+  help: string | null;
+  order: number;
+  required: boolean;
+  reasonPolicy: string;
+  photoPolicy: string;
+  members: SyncFieldGroupMember[];
 }
 
 export interface SyncWorkOrder {
@@ -24,7 +32,7 @@ export interface SyncWorkOrder {
   dueAt: Date | null;
   scheduledFor: Date | null;
   asset: { code: string; name: string; latitude: number; longitude: number };
-  checklist: SyncChecklistItem[];
+  groups: SyncFieldGroup[];
 }
 
 export interface SyncBootstrap {
@@ -55,15 +63,20 @@ export async function getSyncBootstrap(
       asset: { select: { code: true, name: true, latitude: true, longitude: true } },
       checklistVersion: {
         select: {
-          items: {
+          fieldGroups: {
             orderBy: { order: 'asc' },
             select: {
-              code: true,
+              key: true,
               label: true,
-              kind: true,
-              criticality: true,
-              criticalFunctionKey: true,
-              requiresPhoto: true,
+              helpText: true,
+              order: true,
+              required: true,
+              reasonPolicy: true,
+              photoPolicy: true,
+              members: {
+                orderBy: { memberOrder: 'asc' },
+                select: { code: true, label: true },
+              },
             },
           },
         },
@@ -81,13 +94,15 @@ export async function getSyncBootstrap(
       dueAt: w.dueAt,
       scheduledFor: w.scheduledFor,
       asset: w.asset,
-      checklist: (w.checklistVersion?.items ?? []).map((it) => ({
-        code: it.code,
-        label: it.label,
-        kind: it.kind,
-        criticality: it.criticality,
-        criticalFunctionKey: it.criticalFunctionKey,
-        requiresPhoto: it.requiresPhoto,
+      groups: (w.checklistVersion?.fieldGroups ?? []).map((g) => ({
+        key: g.key,
+        label: g.label,
+        help: g.helpText,
+        order: g.order,
+        required: g.required,
+        reasonPolicy: g.reasonPolicy,
+        photoPolicy: g.photoPolicy,
+        members: g.members.map((m) => ({ memberKey: m.code, label: m.label })),
       })),
     })),
   };
