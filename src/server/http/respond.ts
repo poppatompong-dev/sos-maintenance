@@ -6,6 +6,7 @@ import { WorkOrderTransitionError } from '@/server/services/transition-work-orde
 import { RepairError } from '@/server/services/record-repair';
 import { ScheduleError } from '@/server/services/create-schedule-batch';
 import { BatchTransitionError } from '@/server/services/transition-schedule-batch';
+import { FieldSubmissionError } from '@/domain/checklist/canonicalize';
 
 /** JSON response helper for route handlers. */
 export function json(body: unknown, status = 200): Response {
@@ -24,6 +25,7 @@ function inspectionStatus(code: string): number {
       return 404;
     case 'INVALID_ENVELOPE':
     case 'NO_CHECKLIST_VERSION':
+    case 'NO_FIELD_GROUPS':
       return 400;
     default:
       return 409; // conflict / unprocessable domain state
@@ -43,6 +45,9 @@ export function errorResponse(err: unknown): Response {
   }
   if (err instanceof ZodError) {
     return json({ error: 'VALIDATION', issues: err.issues }, 400);
+  }
+  if (err instanceof FieldSubmissionError) {
+    return json({ error: err.code, message: err.message }, 400);
   }
   if (err instanceof InspectionError) {
     return json({ error: err.code, message: err.message }, inspectionStatus(err.code));

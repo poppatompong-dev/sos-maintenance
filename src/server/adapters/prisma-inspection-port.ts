@@ -122,6 +122,7 @@ export function createPrismaInspectionPort(
               itemId,
               checklistVersionId: wo.checklistVersionId,
               result: r.result,
+              note: r.note ?? null,
               capturedLat: input.gps.lat,
               capturedLng: input.gps.lng,
               distanceMeters: input.gps.distanceMeters,
