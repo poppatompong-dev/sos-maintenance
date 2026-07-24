@@ -11,6 +11,8 @@ export interface EvaluatedResponse {
   /** Set when this item verifies a readiness-critical function. */
   criticalFunctionKey?: string;
   observedAt?: Date | null;
+  /** Symptom note / could-not-test reason / general note, persisted to ChecklistResponse.note. */
+  note?: string;
 }
 
 /** A required critical function (key + Thai label). */
@@ -53,3 +55,15 @@ export function allCriticalPassed(
   const critical = responses.filter((r) => r.criticality === 'CRITICAL');
   return critical.length > 0 && critical.every((r) => r.result === 'PASS');
 }
+
+export {
+  canonicalizeFieldSubmission,
+  FieldSubmissionError,
+  type CanonicalizeInput,
+  type SubmittedGroup,
+  type SubmittedMember,
+  type VersionItemDef,
+  type VersionGroupDef,
+  type GroupOutcome,
+  type MemberState,
+} from './canonicalize';
