@@ -53,7 +53,7 @@ const passing: EvaluatedResponse[] = CRITICAL_FUNCTIONS.map((c) => ({
 function command(
   over: Partial<{
     responses: EvaluatedResponse[];
-    gps: { lat: number; lng: number };
+    gps: { lat: number; lng: number; reason?: string };
     roles: SubmitInspectionCommand['actor']['roles'];
     mutationId: string;
   }> = {},
@@ -61,7 +61,7 @@ function command(
   const envelope: MutationEnvelope<{
     workOrderId: string;
     responses: EvaluatedResponse[];
-    gps: { lat: number; lng: number };
+    gps: { lat: number; lng: number; reason?: string };
   }> = {
     mutationId: over.mutationId ?? '22222222-2222-4222-8222-222222222222',
     deviceId: 'device-1',
@@ -105,14 +105,41 @@ describe('submitInspection (vertical slice)', () => {
     expect(r.faults?.some((f) => f.severity === 'CRITICAL')).toBe(true);
   });
 
-  it('GPS beyond 100 m is flagged but still recorded', async () => {
+  it('GPS beyond 100 m WITH a reason is still recorded and flagged', async () => {
     // ~1 km north
-    const gps = { lat: ASSET.lat + 0.01, lng: ASSET.lng };
+    const gps = { lat: ASSET.lat + 0.01, lng: ASSET.lng, reason: 'ป้ายจุดตรวจถูกบดบัง ต้องยืนห่างจากเสา' };
     const port = new InMemoryPort();
     const r = await submitInspection(port, command({ gps }));
     expect(r.gps?.isException).toBe(true);
     expect(r.gps?.requiresReason).toBe(true);
     expect(port.persisted[0].gps.reviewFlag).toBe(true);
+    expect(port.persisted[0].gps.reason).toBe(gps.reason);
+  });
+
+  it('GPS beyond 100 m WITHOUT a reason is rejected before persisting', async () => {
+    // ~1 km north, no reason supplied
+    const gps = { lat: ASSET.lat + 0.01, lng: ASSET.lng };
+    const port = new InMemoryPort();
+    await expect(submitInspection(port, command({ gps }))).rejects.toMatchObject({
+      code: 'GPS_REASON_REQUIRED',
+    });
+    expect(port.persisted).toHaveLength(0);
+  });
+
+  it('GPS beyond 100 m with a whitespace-only reason is rejected', async () => {
+    const gps = { lat: ASSET.lat + 0.01, lng: ASSET.lng, reason: '   ' };
+    const port = new InMemoryPort();
+    await expect(submitInspection(port, command({ gps }))).rejects.toMatchObject({
+      code: 'GPS_REASON_REQUIRED',
+    });
+    expect(port.persisted).toHaveLength(0);
+  });
+
+  it('GPS within 100 m never requires a reason', async () => {
+    const port = new InMemoryPort();
+    const r = await submitInspection(port, command()); // default gps == asset location
+    expect(r.gps?.requiresReason).toBe(false);
+    expect(port.persisted[0].gps.reason).toBeUndefined();
   });
 
   it('is idempotent — replaying the same mutationId does not persist twice', async () => {

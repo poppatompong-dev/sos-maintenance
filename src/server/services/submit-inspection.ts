@@ -4,7 +4,7 @@ import {
   toCriticalCheckResults,
   type EvaluatedResponse,
 } from '../../domain/checklist';
-import { evaluateGpsCapture, type GpsEvaluation } from '../../domain/geo';
+import { evaluateGpsCapture, gpsReasonMissing, type GpsEvaluation } from '../../domain/geo';
 import { deriveFaults, hasCriticalFault, type DerivedFault } from '../../domain/fault';
 import { evaluateReadiness, type ReadinessResult } from '../../domain/readiness';
 import { validateEnvelope, type MutationEnvelope } from '../../domain/sync/envelope';
@@ -33,7 +33,7 @@ export interface PersistInspectionInput {
   workOrderId: string;
   assetId: string;
   responses: EvaluatedResponse[];
-  gps: GpsEvaluation & { lat: number; lng: number };
+  gps: GpsEvaluation & { lat: number; lng: number; reason?: string };
   readiness: ReadinessResult;
   faults: DerivedFault[];
 }
@@ -48,7 +48,8 @@ export interface InspectionPort {
 export interface InspectionPayload {
   workOrderId: string;
   responses: EvaluatedResponse[];
-  gps: { lat: number; lng: number };
+  /** `reason` is required when the capture is >100 m from the asset (doc 08 UAT case 8). */
+  gps: { lat: number; lng: number; reason?: string };
 }
 
 export interface SubmitInspectionCommand {
@@ -106,6 +107,12 @@ export async function submitInspection(
     payload.gps,
     cmd.gpsThresholdMeters,
   );
+  if (gpsReasonMissing(gps, payload.gps.reason)) {
+    throw new InspectionError(
+      'GPS_REASON_REQUIRED',
+      'กรุณาระบุเหตุผลที่ตำแหน่งห่างจากเสาเกิน 100 เมตร',
+    );
+  }
 
   // 6. Faults from failed items.
   const faults = deriveFaults(payload.workOrderId, payload.responses);
@@ -133,7 +140,7 @@ export async function submitInspection(
     workOrderId: payload.workOrderId,
     assetId: asset.assetId,
     responses: payload.responses,
-    gps: { ...gps, lat: payload.gps.lat, lng: payload.gps.lng },
+    gps: { ...gps, lat: payload.gps.lat, lng: payload.gps.lng, reason: payload.gps.reason },
     readiness,
     faults,
   });
