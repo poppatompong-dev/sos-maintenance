@@ -7,6 +7,8 @@ import { z } from 'zod';
 export const gpsSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
+  /** Required only when the server computes the capture is >100m from the asset. */
+  reason: z.string().optional(),
 });
 
 export const attachmentManifestItemSchema = z.object({

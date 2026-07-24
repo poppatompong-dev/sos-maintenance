@@ -12,6 +12,11 @@ describe('gpsSchema', () => {
   it('rejects out-of-range latitude', () => {
     expect(gpsSchema.safeParse({ lat: 200, lng: 100 }).success).toBe(false);
   });
+  it('accepts an optional GPS reason string (>100m mandatory-reason wiring)', () => {
+    const r = gpsSchema.safeParse({ lat: 15.7, lng: 100.12, reason: 'สัญญาณ GPS คลาดเคลื่อนที่จุดนี้' });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.reason).toBe('สัญญาณ GPS คลาดเคลื่อนที่จุดนี้');
+  });
 });
 
 describe('fieldInspectionPayloadSchema', () => {
