@@ -10,7 +10,7 @@
 import { MaintenanceKind, WorkOrderStatus, type PrismaClient } from '@prisma/client';
 
 /** Public, stable identifiers for the demo fixture (also used by docs/tests). */
-export const DEMO_WORK_ORDER_CODE = 'DEMO-LOCAL-EP01-MONTHLY';
+export const DEMO_WORK_ORDER_CODE = 'DEMO-LOCAL-EP01-MONTHLY-V2';
 export const DEMO_ASSET_CODE = 'EP01';
 export const DEMO_ASSET_TYPE_KEY = 'SOS_POLE';
 export const INTERNAL_ACTOR_ID = '00000000-0000-0000-0000-000000000001';

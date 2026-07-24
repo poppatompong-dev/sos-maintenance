@@ -25,8 +25,9 @@
     "db:reset": "prisma migrate reset --force",
     "db:seed": "prisma db seed",
     "db:seed:demo": "tsx prisma/seed-demo.ts",
+    "db:checklist:v2": "tsx prisma/checklist-v2-cli.ts",
     "db:postgis": "prisma db execute --file prisma/sql/001_enable_postgis.sql --schema prisma/schema.prisma",
-    "db:setup": "prisma migrate deploy && pnpm db:postgis && pnpm db:seed",
+    "db:setup": "prisma migrate deploy && pnpm db:postgis && pnpm db:seed && pnpm db:checklist:v2",
     "db:studio": "prisma studio"
   },
   "prisma": {
