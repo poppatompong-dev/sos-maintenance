@@ -49,6 +49,9 @@ src/
     queries/              read models for the UI (readiness-overview — TEMP: seed)
     services/             application services (submit-inspection + its port)
   components/             UI: StatusBadge, StatusRail, AppRail, PoleTable, icons…
+  presentation/           presentation-boundary Thai mapper (thai-labels.ts) — OUTSIDE
+                          src/domain; the only place internal state/status codes
+                          (group outcome, member state, WO kind/status) become Thai
   lib/                    view helpers (readiness-view: status → label/icon/tone)
   worker/main.ts          background scheduler (jobs persisted in PG)
 prisma/                   schema (20+ entities), PostGIS SQL, 27-pole seed
@@ -74,6 +77,60 @@ approved baseline, next-due + grace ──────────────�
 `src/server/services/submit-inspection.ts` composes the whole thing for one
 submission: **RBAC → envelope idempotency → GPS rule → checklist→readiness →
 fault derivation → persist**. It's tested end-to-end with an in-memory port.
+
+## Flexible field checklist (versioned groups, 2026-07-24 slice)
+
+The monthly field checklist renders as **five outcome-oriented Thai groups**
+(plus one optional general note) instead of a flat per-item list, without any
+change to the readiness pipeline above. Added on top of the existing
+`ChecklistTemplate → ChecklistTemplateVersion → ChecklistItem` spine:
+
+- **`ChecklistFieldGroup`** (`prisma/schema.prisma`) — version-scoped, one row
+  per group (`key`, Thai `label`/`helpText`, `order`, `required`,
+  `reasonPolicy`, `photoPolicy`). `ChecklistItem` gets nullable `fieldGroupId`
+  + `memberOrder`: an item belongs to at most one group; the general-note item
+  stays ungrouped. Membership, labels, and policies are versioned data — never
+  hardcoded in the UI.
+- **Version lifecycle: DRAFT → PUBLISHED → RETIRED.** `ChecklistTemplateVersion`
+  gained `status` + `retiredAt` (additive, alongside the existing
+  `publishedAt`/`isLocked`). Only a **PUBLISHED** version is referenceable by a
+  `MaintenancePlan` or pinnable by a `WorkOrder` — a DB foreign key can't
+  express that rule, so it's enforced in
+  `src/server/services/checklist-version.ts` (`publishChecklistVersion` runs
+  the pure `validateChecklistVersionForPublish` and freezes the version;
+  `repointPlanToVersion` refuses a non-PUBLISHED or wrong-kind version;
+  `retireChecklistVersion` stops new references without touching content or
+  history). Editorial change = new draft → publish → repoint; nothing
+  published is ever edited in place.
+- **`canonicalizeFieldSubmission`** (`src/domain/checklist/canonicalize.ts`,
+  pure) — the server-side trust boundary. It expands the technician's group
+  outcomes (`NORMAL`/`PROBLEM`/`UNTESTABLE`, transport codes only) into the
+  authoritative per-item `EvaluatedResponse[]` the readiness pipeline already
+  consumes, reading `criticality`/`criticalFunctionKey` from the **pinned
+  version's item definitions** (`src/server/queries/checklist-definition.ts`),
+  never from the request — the client can no longer supply criticality or
+  function keys. `src/app/api/inspections/route.ts` loads the pinned
+  definition, canonicalizes, then calls the unchanged
+  `submitInspection`/readiness/fault flow.
+- **Presentation-boundary Thai mapper** — `src/presentation/thai-labels.ts`,
+  deliberately **outside `src/domain`**. It is the only place a group-outcome,
+  member-state, work-order kind, or work-order status code becomes Thai;
+  exhaustive per enum with a safe generic fallback that never echoes a raw
+  token. Group/member *content* (labels, help text) comes straight from
+  versioned data and never routes through this mapper. Item kinds are never
+  rendered at all.
+- **Bootstrap** (`src/server/queries/sync.ts`) returns only display-safe group
+  fields (`key`, `label`, `help`, `order`, `required`, policies, member
+  `label`/opaque `memberKey`) — no `kind`, `criticality`, or
+  `criticalFunctionKey` ever leaves the server.
+
+Monthly checklist **v2** (the grouped definition) is rolled out idempotently
+by `prisma/checklist-v2.ts` (`pnpm db:checklist:v2`, chained into
+`pnpm db:setup`): atomic creation, refuses to resurrect a RETIRED v2, and
+verifies any existing v2 against an exact content fingerprint before trusting
+or repointing it. Out of scope for this slice (unchanged): photo capture
+(group 5 is `photoPolicy: NONE`), the GPS `>100 m` mandatory-reason wiring
+(`ChecklistResponse.locationReason` stays reserved), and the offline queue.
 
 ## Ports & adapters (how Sprint 4 plugs in)
 

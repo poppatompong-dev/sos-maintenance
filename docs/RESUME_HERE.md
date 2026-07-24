@@ -5,17 +5,19 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-23 (end-of-day handoff — flexible field checklist design **owner-approved** and its **implementation plan is complete**; **no implementation started today**)._
+_Last updated: 2026-07-24 (flexible field checklist **implemented**, Tasks 1–16 of
+the plan complete and pushed; GPS >100m mandatory reason is the next ordered
+slice; QA/UAT gate still NOT closed — do not claim production-ready)._
 
-## ▶ Next slice is planned and ready to execute
-The **flexible field checklist** is the next ordered slice. Its design is
-**owner-approved** and its implementation plan is **complete** — but **no code has
-been written yet**. Read both before touching anything:
-- **Approved design:** [`docs/superpowers/specs/2026-07-23-flexible-field-checklist-design.md`](superpowers/specs/2026-07-23-flexible-field-checklist-design.md)
-- **Implementation plan (execute from Task 1, in order):** [`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`](superpowers/plans/2026-07-23-flexible-field-checklist.md)
-
-The approved design was committed as `762ce3d` (`docs: design flexible field
-checklist`). It is the plan's base commit.
+## ▶ Next slice: GPS >100m mandatory reason (UAT case 8)
+With the flexible grouped monthly checklist now live, the next ordered slice is
+wiring the GPS **>100 m mandatory reason**: `ChecklistResponse.locationReason`
+already exists in the schema and the review flag already works, but the
+DTO/service/UI path that *collects and persists* a required reason when the
+captured position is >100 m from the asset is still missing. Domain-first, with
+tests, following the same TDD/small-commit pattern as the checklist slice. This
+closes **UAT case 8** (`docs/spec/06`) — still open until this lands and is
+tested.
 
 **ดูสถานะ milestone และหลักฐานล่าสุด:** [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md)
 
@@ -23,11 +25,12 @@ checklist`). It is the plan's base commit.
 แล้วส่งต่อ [`HANDOFF_CLAUDE.md`](HANDOFF_CLAUDE.md) ให้ Claude Code
 
 ## Where we are
-- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ — implementation is in the working tree, the DB-backed integration gate is green, and the `/today` happy path is now verified end-to-end against a local DB.
-- **Tests:** `pnpm test` → **182 passing** (22 files); DB-backed integration → **43/43 passing (9 files)**. `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green. The **CI pnpm version mismatch is fixed (DONE)**. (Prior CI-green baseline before this slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
+- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ — implementation is in the working tree and pushed, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below), and `/today` now renders 5 Thai field groups instead of 10 flat items.
+- **Tests:** `pnpm test` → **224 passing** (26 files); DB-backed integration → **48 passing / 2 failing (11 files)**. The 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" — this local DB permanently carries the guarded demo fixtures, so those two specific assertions (0 work orders, 0 components) don't hold; this predates the checklist slice and is not a regression it introduced. `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green. (Prior CI-green baseline: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
 - **Local Docker Desktop + PostGIS is now healthy on this machine**, so hands-on `/today` workflow UAT ran against a real local DB. Do **not** fabricate production work orders — the demo fixture is guarded, local-`sos`-only, and fail-closed.
-- **Current workflow slice — DONE for the happy path:** `/today` loads the real sync bootstrap, shows open field work orders, starts assigned work, captures GPS/checklist results, submits idempotent evidence, and advances the work order to `SUBMITTED`. Verified in-browser on `http://localhost:3100/today` against the guarded demo fixture: one ASSIGNED demo with 10 real checklist items; `ASSIGNED→IN_PROGRESS` 200, `POST /api/inspections` 201, transition to `SUBMITTED` 200, no console errors. DB evidence: status `SUBMITTED` version 2, 10 responses under 1 `clientMutationId`, distance 0 m, 1 `UNKNOWN` `ReadinessSnapshot`, two `work_log` transitions. **After submit, `/today` correctly shows zero open work orders** — `SUBMITTED` is excluded from the open-order bootstrap; confirm success via API/DB, not a persistent pill.
-- **Running app (no Docker needed):** `pnpm dev` → `/` control-centre dashboard, `/today` technician field shell (installable PWA).
+- **Flexible field checklist — DONE, see `docs/WORKLOG.md` 2026-07-24 entry for full detail.** Monthly checklist v2 (5 Thai outcome-oriented groups + 1 optional note) is now the active definition (`pnpm db:checklist:v2`, chained into `pnpm db:setup`); legacy v1 stays frozen/untouched and renders a Thai reissue advisory. Server-side canonicalization (`src/domain/checklist/canonicalize.ts`) means the client can no longer supply criticality/function keys. Browser-verified end-to-end on `http://localhost:3100/today` against the new `DEMO-LOCAL-EP01-MONTHLY-V2` demo: card render → `เริ่มงาน` (200) → all 5 groups `ปกติ` → submit → `POST /api/inspections` 201 → `SUBMITTED`, no console errors, no PASS/FAIL/enum leakage in the accessibility tree. DB evidence: 10 `ChecklistResponse` rows under 1 `clientMutationId`, 1 fresh `ReadinessSnapshot` (status `UNKNOWN`/`NO_APPROVED_BASELINE` — expected, unrelated to this slice: EP01's baseline was never approved). **This slice does NOT close UAT #3/#4/#8** — see the WORKLOG entry for exactly what it does and doesn't prove.
+- **Prior workflow slice (v1, still valid history):** `/today` loads the real sync bootstrap, shows open field work orders, starts assigned work, captures GPS/checklist results, submits idempotent evidence, and advances the work order to `SUBMITTED`. **After submit, `/today` correctly shows zero open work orders for that WO** — `SUBMITTED` is excluded from the open-order bootstrap; confirm success via API/DB, not a persistent pill.
+- **Running app (no Docker needed):** `pnpm dev` → `/` control-centre dashboard, `/today` technician field shell (installable PWA). **No `.env` file exists in this working tree** — a fresh `pnpm dev`/`pnpm db:*` needs `DATABASE_URL` (and for `/today` runtime, `AUTH_MODE=internal`) set explicitly in the shell; see `docs/DEMO_RUNBOOK.md`.
 - **Repo:** https://github.com/poppatompong-dev/sos-maintenance (private, branch `main`).
 - **What works end-to-end today:** the whole domain (readiness, recurrence, geo,
   work state machine, fault, metrics, RBAC, sync, import, notifications) + two UI
@@ -69,25 +72,24 @@ represented and tested. This is a wiring slice, not a schema change.
 ## Next steps (in order)
 1. ~~**Safe test environment + guarded demo fixture**~~ — **DONE.** Local Docker
    PostGIS is healthy; `pnpm db:seed:demo` creates one idempotent, fail-closed,
-   local-`sos`-only ASSIGNED demo work order `DEMO-LOCAL-EP01-MONTHLY`. Never
-   writes to production/Neon. See `docs/DEMO_RUNBOOK.md`.
+   local-`sos`-only ASSIGNED demo work order. Never writes to production/Neon.
+   See `docs/DEMO_RUNBOOK.md`.
 2. ~~**Workflow UAT (happy path)**~~ — **DONE** for start → checklist/GPS → submit
-   → `SUBMITTED`, verified in-browser on the local DB (evidence above). Still
-   remaining in this area: wire dashboard actions to real
-   inspection/sync/fault/work-order flows, plus offline queue / QR / photo.
-3. **Flexible field checklist (NEXT — design owner-approved, plan complete, not
-   started).** Execute
+   → `SUBMITTED`, verified in-browser on the local DB. Still remaining in this
+   area: wire dashboard actions to real inspection/sync/fault/work-order flows,
+   plus offline queue / QR / photo.
+3. ~~**Flexible field checklist**~~ — **DONE (2026-07-24).** All 16 tasks of
    [`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`](superpowers/plans/2026-07-23-flexible-field-checklist.md)
-   from **Task 1 in order**, test-first, in small vertical commits with Codex
-   review between meaningful tasks. It turns the monthly field inspection into
+   executed test-first in small vertical commits. Monthly field inspection is now
    five outcome-oriented Thai groups (plus one optional note) defined entirely by
    versioned data, with a pure server-authoritative canonicalization — no
-   readiness/auth/offline change. This slice does **not** close UAT case 8 (below)
-   and does **not** claim the QA/UAT gate.
-4. **GPS >100m reason (after the checklist slice):** the
-   `ChecklistResponse.locationReason` column already exists — add the missing
-   DTO/service/UI wiring (domain first, with tests) to collect and persist the
-   mandatory reason and close **UAT case 8**. Still an open release blocker.
+   readiness/auth/offline change. Full detail + exact test evidence in
+   `docs/WORKLOG.md` (2026-07-24 entry). This slice does **not** close UAT case 8
+   (below) and does **not** claim the QA/UAT gate.
+4. **GPS >100m reason (NEXT).** The `ChecklistResponse.locationReason` column
+   already exists — add the missing DTO/service/UI wiring (domain first, with
+   tests) to collect and persist the mandatory reason and close **UAT case 8**.
+   Still an open release blocker.
 5. **Security boundary:** `AUTH_MODE=internal` itself is owner-approved, but the
    **public Vercel URL remains an OPEN security exception** — every reachable
    caller gets full permissions. It must be restricted to the municipality's

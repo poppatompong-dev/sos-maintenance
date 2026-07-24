@@ -5,6 +5,97 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-24 — Flexible field checklist: implemented (Tasks 1–15 of 16)
+
+**FACT:** Executed `docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`
+Task 1 through Task 15 (of 16), TDD, one commit per task. Shipped: presentation-
+boundary Thai mapper (`src/presentation/thai-labels.ts`); pure
+`canonicalizeFieldSubmission` + `validateChecklistVersionForPublish`
+(`src/domain/checklist/`); additive schema (`ChecklistFieldGroup`,
+`ChecklistVersionStatus`/`ChecklistReasonPolicy`/`ChecklistPhotoPolicy`,
+`ChecklistItem.fieldGroupId`/`memberOrder`) applied via migration
+`20260724170100_add_field_groups_and_version_lifecycle`; seed now creates
+version-1 as PUBLISHED/frozen; group-outcome DTO (`fieldInspectionPayloadSchema`)
+replacing the old flat `inspectionPayloadSchema`; display-safe grouped bootstrap
+(`src/server/queries/sync.ts`); server-only pinned-definition loader
+(`checklist-definition.ts`); `/api/inspections` route now canonicalizes on the
+server (criticality/function keys read from the pinned version, never the
+request); `checklist-version.ts` service (publish/repoint/retire, referenceability
+enforced in services not by FK); idempotent, fingerprint-guarded monthly v2
+rollout (`prisma/checklist-v2.ts`, `pnpm db:checklist:v2`, chained into
+`pnpm db:setup`); grouped accessible `/today` UI
+(`src/components/TodayWorkspace.tsx`); 14 new/rewritten integration tests.
+
+**DECISION:** Monthly checklist **v2** (5 Thai field groups + 1 optional note) is
+now the active definition — the monthly `MaintenancePlan` is repointed to it.
+Legacy v1 is frozen/PUBLISHED and untouched; a work order still pinned to v1
+renders a Thai reissue advisory instead of a raw per-item fallback. The demo
+work-order code is now `DEMO-LOCAL-EP01-MONTHLY-V2` (old
+`DEMO-LOCAL-EP01-MONTHLY` never mutated).
+
+**Deviation from the plan, with reason:** Task 4's literal `prisma migrate dev
+--create-only` / `prisma migrate dev` commands could not run — this local `sos`
+DB carries PostGIS geography columns/extensions added out-of-band by
+`prisma/sql/001_enable_postgis.sql` (this project's own documented pattern),
+which `migrate dev`'s shadow-DB drift check flags and can only resolve via a
+destructive `migrate reset` (data loss, refused). Used the safe alternative
+instead: a pure schema-to-schema diff (`prisma migrate diff
+--from-schema-datamodel <pre-edit schema.prisma> --to-schema-datamodel
+schema.prisma --script`, no DB comparison) to generate byte-identical DDL, then
+applied it with `prisma migrate deploy` — the same production-safe path this
+repo's own `db:deploy`/CI already use. No data was lost; the resulting schema
+is identical to what `migrate dev` would have produced.
+
+Task 14's browser verification also used the **non-destructive** path: rather
+than the plan's full local-DB-volume reset (stop postgres → remove only
+`sos-maintenance_db-data` → recreate → `db:setup` → `db:seed:demo`), the v2
+rollout was already live on this DB from Task 11, so `pnpm db:seed:demo` alone
+created the new-coded work order without touching anything else. See
+`docs/DEMO_RUNBOOK.md` § Grouped monthly (v2) for both paths and the full
+observed evidence (card render, group labels, no enum leakage, `เริ่มงาน` → 200,
+`POST /api/inspections` → 201, `SUBMITTED`, DB row counts).
+
+**EVIDENCE (exact, freshly run, not assumed):** `pnpm test` → **224 passing (26
+files)** (baseline 182 + 42 new: 8 thai-labels + 12 canonicalize + 11
+version-lifecycle + 6 fingerprint-guard + net DTO delta + others). `pnpm
+typecheck` / `pnpm lint` / `pnpm build` → exit 0. `git diff --check` → clean.
+`pnpm test:integration` (unset `AUTH_MODE`/`AUTH_DEV_BYPASS`) → **48 passing / 2
+failing (11 files)**: all 14 new/rewritten tests for this slice are green
+(bootstrap 2, inspections 5, checklist-version 5, checklist-v2 rollout 2); the
+**2 failures are pre-existing and unrelated** — `src/app/api/read-routes.itest.ts`
+asserts an empty "fresh seed" (`GET /api/work-orders` count 0, EP01 has no
+components) but this local DB permanently carries the guarded demo fixture +
+v2 rollout data; this was already failing identically **before any change in
+this slice** (confirmed via a baseline run at the start of this session).
+`pnpm db:checklist:v2` run twice locally: create then idempotent no-op, same
+version id; DB check: 5 groups, 10 items, 9 grouped (`m_note` ungrouped).
+Browser evidence for the NORMAL submit path is in `docs/DEMO_RUNBOOK.md`.
+
+**REVIEW (trust boundary + immutability, self-checked against the design's
+acceptance criteria):** client can no longer supply `criticality`/
+`criticalFunctionKey` — `fieldInspectionPayloadSchema` doesn't accept them, and
+`canonicalizeFieldSubmission` reads them only from the pinned version's item
+defs loaded server-side. A published version's groups/items/memberships/
+labels/policies are frozen (`publishChecklistVersion` is a no-op once
+PUBLISHED, throws `VERSION_RETIRED` if retired — never resurrected).
+Referenceability (`repointPlanToVersion`) is enforced in the service, checked
+against both version status AND matching template kind (a monthly plan can
+never point at a weekly version). `ChecklistResponse.locationReason` is
+untouched by this slice. Item kinds are never rendered in the new UI.
+
+**BLOCKER / HONEST (unchanged by this slice):** UAT case **8** (GPS >100m
+mandatory reason) still open — next slice. UAT case **3** (QR/photo/GPS>100m)
+and **4** (corrective-WO/email downstream) remain **partial**, not closed —
+this slice only contributes the grouped-check-pass→readiness and
+critical-fail→DOWN+Fault portions respectively, proven by the integration
+tests, not the full UAT scenario. Public Vercel URL is still an **OPEN
+security exception**; Neon credential rotation still required before release;
+final QA/UAT + redeploy not run. Task 16 (push + CI watch) intentionally not
+run in this slice — see the next entry once it happens (or the top of
+`docs/RESUME_HERE.md` for current status).
+
+---
+
 ## 2026-07-23 — Flexible field checklist: design approved + plan complete (docs-only handoff)
 
 **FACT:** Design ของ flexible field checklist ได้รับ **owner approval** และ

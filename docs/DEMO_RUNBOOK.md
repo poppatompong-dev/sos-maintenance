@@ -167,6 +167,72 @@ EP01, so no >100 m review flag); **1** `ReadinessSnapshot` for EP01 computed
 `UNKNOWN`; two `work_log` transition rows (`ASSIGNED → IN_PROGRESS`,
 `IN_PROGRESS → SUBMITTED`).
 
+## Grouped monthly (v2)
+
+The flexible field checklist slice (2026-07-24) introduces monthly checklist
+**version 2**: five outcome-oriented Thai field groups instead of ten flat items.
+`pnpm db:checklist:v2` (idempotent; also run automatically as the last step of
+`pnpm db:setup`) creates it, publishes it, and repoints the monthly
+`MaintenancePlan` to it. The demo work-order code for this version is
+**`DEMO-LOCAL-EP01-MONTHLY-V2`** (`prisma/demo-fixture.ts`) — distinct from the
+legacy `DEMO-LOCAL-EP01-MONTHLY` (v1) so neither `pnpm db:seed:demo` run ever
+mutates, deletes, or re-pins the other's work order or evidence.
+
+**Clean-slate reset (only if you want a single, deterministic demo).** The
+dev compose declares **two** named volumes, `db-data` **and** `keycloak-data`.
+**Never run `docker compose down -v`** — it destroys both. Use this
+fail-closed, volume-scoped PowerShell reset instead (removes only the literal
+`sos-maintenance_db-data` volume and aborts if that name doesn't resolve to
+exactly one volume):
+
+```powershell
+docker compose stop postgres
+docker compose rm -f postgres
+$targetVolume = 'sos-maintenance_db-data'
+$hits = @(docker volume ls --format '{{.Name}}' | Where-Object { $_ -eq $targetVolume })
+if ($hits.Count -ne 1) { throw "ABORT: expected exactly one volume named '$targetVolume', found $($hits.Count)." }
+docker volume rm $targetVolume
+docker compose up -d postgres
+pnpm db:setup       # migrate + PostGIS + seed + db:checklist:v2 (monthly plan -> v2)
+pnpm db:seed:demo   # one ASSIGNED DEMO-LOCAL-EP01-MONTHLY-V2 pinning the grouped v2
+```
+
+**Non-reset path (what was actually verified 2026-07-24).** A reset is not
+required if the grouped v2 is already the active monthly definition on this
+DB (i.e. `pnpm db:checklist:v2` has already run) — `pnpm db:seed:demo` simply
+creates the new-coded work order alongside whatever else already exists,
+without touching it. This is what was done for the verification below: no
+volume reset, `pnpm db:checklist:v2` was already applied, then
+`pnpm db:seed:demo` created `DEMO-LOCAL-EP01-MONTHLY-V2` fresh
+(`... is ASSIGNED (created).`).
+
+On a **non-reset** DB that still has the old ungrouped `DEMO-LOCAL-EP01-MONTHLY`
+(v1) around, `/today` shows it too, pinned to a version with no field groups —
+by design this renders the Thai reissue advisory ("ใบงานนี้ผูกกับเวอร์ชันเดิมที่ยังไม่มีกลุ่มภาคสนาม
+กรุณาให้ผู้วางแผนออกใบงานใหม่ภายใต้เวอร์ชันปัจจุบัน") and "0 กลุ่ม" instead of a raw
+per-item fallback list. It is never mutated by seeding the v2 demo.
+
+**Verified 2026-07-24** (local Docker PostGIS, non-reset DB, browser at
+`http://localhost:3100/today`, geolocation mocked to EP01's own coordinates):
+card showed heading `DEMO-LOCAL-EP01-MONTHLY-V2`, status `มอบหมายแล้ว`, "5 กลุ่ม";
+accessibility tree confirmed the five Thai group labels and only
+ปกติ/พบปัญหา/ตรวจไม่ได้ per group (no `PASS`/`FAIL`/`BOOLEAN_PASS_FAIL`/criticality
+marker/the word "Checklist" anywhere). `เริ่มงาน` → `POST .../transition` 200 →
+`กำลังดำเนินการ`. All five groups set to `ปกติ`, general note left empty, submit →
+`POST /api/inspections` **201**, `readiness.status` in the response was
+`READY`-eligible at the checklist level but the **written snapshot was
+`UNKNOWN`** with reason `NO_APPROVED_BASELINE` — EP01's baseline survey was
+never approved on this local DB, which is separate, unchanged readiness logic
+(doc 01: no approved baseline ⇒ UNKNOWN regardless of checklist result), not a
+defect in this slice. Work order transitioned to `SUBMITTED`; no console
+errors. DB check: **10** `ChecklistResponse` rows (9 group members `PASS` +
+`m_note` `NA`) under **1** `clientMutationId`; **1** fresh `ReadinessSnapshot`
+for EP01. The PROBLEM (พบปัญหา) / UNTESTABLE (ตรวจไม่ได้) paths were **not**
+re-exercised manually in this browser session (would need a second fresh work
+order); they are proven end-to-end against the same `POST /api/inspections`
+route by `src/app/api/inspections/route.itest.ts` (PROBLEM on a critical
+member → `DOWN` + a `CRITICAL` fault; UNTESTABLE → not `READY`), both green.
+
 ## 7. Stop
 
 ```powershell
