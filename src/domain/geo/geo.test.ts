@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateGpsCapture, haversineMeters, type LatLng } from './index';
+import { evaluateGpsCapture, gpsReasonMissing, haversineMeters, type LatLng } from './index';
 
 // metres-per-degree of latitude at the equator for the mean radius used above.
 const M_PER_DEG_LAT = (Math.PI * 6_371_008.8) / 180; // ≈ 111195 m
@@ -52,5 +52,23 @@ describe('evaluateGpsCapture — 100 m rule', () => {
 
   it('honours a custom threshold', () => {
     expect(evaluateGpsCapture(asset, north(150), 200).isException).toBe(false);
+  });
+});
+
+describe('gpsReasonMissing', () => {
+  it('is false when the evaluation does not require a reason', () => {
+    expect(gpsReasonMissing({ requiresReason: false })).toBe(false);
+    expect(gpsReasonMissing({ requiresReason: false }, 'มีเหตุผลอยู่แล้วก็ไม่สำคัญ')).toBe(false);
+  });
+
+  it('is true when required and no reason, an empty string, or whitespace is given', () => {
+    expect(gpsReasonMissing({ requiresReason: true })).toBe(true);
+    expect(gpsReasonMissing({ requiresReason: true }, undefined)).toBe(true);
+    expect(gpsReasonMissing({ requiresReason: true }, '')).toBe(true);
+    expect(gpsReasonMissing({ requiresReason: true }, '   ')).toBe(true);
+  });
+
+  it('is false when required and a non-blank reason is given', () => {
+    expect(gpsReasonMissing({ requiresReason: true }, 'สัญญาณ GPS คลาดเคลื่อนที่จุดนี้')).toBe(false);
   });
 });

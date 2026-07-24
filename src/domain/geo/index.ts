@@ -52,3 +52,17 @@ export function evaluateGpsCapture(
     reviewFlag: isException,
   };
 }
+
+const isBlank = (s?: string | null): boolean => !s || s.trim().length === 0;
+
+/**
+ * Whether a GPS capture (see evaluateGpsCapture) still lacks the reason it
+ * requires. Pure trust-boundary check for the mandatory >100 m reason rule
+ * (doc 08 UAT case 8) — the caller rejects the submission when this is true.
+ */
+export function gpsReasonMissing(
+  evaluation: Pick<GpsEvaluation, 'requiresReason'>,
+  reason?: string | null,
+): boolean {
+  return evaluation.requiresReason && isBlank(reason);
+}
