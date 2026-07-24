@@ -78,6 +78,22 @@ enum ResponseResult {
   UNKNOWN
 }
 
+enum ChecklistVersionStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum ChecklistReasonPolicy {
+  STANDARD
+}
+
+enum ChecklistPhotoPolicy {
+  NONE
+  OPTIONAL
+  REQUIRED
+}
+
 enum ScheduleBatchStatus {
   DRAFT
   APPROVED
@@ -160,22 +176,22 @@ enum ReadinessTrigger {
 /// Application-side mirror of a Keycloak subject. Credentials & MFA live in
 /// Keycloak — this table holds no passwords, only the subject id + profile.
 model User {
-  id             String    @id @default(uuid()) @db.Uuid
-  keycloakId     String?   @unique
-  username       String    @unique
-  displayName    String
-  email          String?
-  roles          AppRole[]
-  active         Boolean   @default(true)
-  retiredAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id          String    @id @default(uuid()) @db.Uuid
+  keycloakId  String?   @unique
+  username    String    @unique
+  displayName String
+  email       String?
+  roles       AppRole[]
+  active      Boolean   @default(true)
+  retiredAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  assignments        Assignment[]
-  approvedSurveys    Asset[]           @relation("BaselineApprover")
-  createdBatches     ScheduleBatch[]   @relation("BatchCreator")
-  approvedBatches    ScheduleBatch[]   @relation("BatchApprover")
-  notifications      Notification[]
+  assignments     Assignment[]
+  approvedSurveys Asset[]         @relation("BaselineApprover")
+  createdBatches  ScheduleBatch[] @relation("BatchCreator")
+  approvedBatches ScheduleBatch[] @relation("BatchApprover")
+  notifications   Notification[]
 
   @@map("app_user")
 }
@@ -197,15 +213,15 @@ model AssetType {
 }
 
 model Location {
-  id            String    @id @default(uuid()) @db.Uuid
-  code          String?   @unique // correlates 1:1 with an SOS pole in V1 (EP01..)
-  name          String
-  longitude     Float // WGS84 lon
-  latitude      Float // WGS84 lat
+  id             String    @id @default(uuid()) @db.Uuid
+  code           String?   @unique // correlates 1:1 with an SOS pole in V1 (EP01..)
+  name           String
+  longitude      Float // WGS84 lon
+  latitude       Float // WGS84 lat
   navigationNote String?
-  retiredAt     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  retiredAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   assets Asset[]
 
@@ -213,32 +229,32 @@ model Location {
 }
 
 model Asset {
-  id              String               @id @default(uuid()) @db.Uuid
-  code            String               @unique // EP01..EP27
-  name            String
-  assetTypeId     String               @db.Uuid
-  locationId      String               @db.Uuid
-  longitude       Float // canonical asset coordinate (may differ from Location after survey)
-  latitude        Float
-  qrToken         String               @unique // opaque token encoded in the QR
-  lifecycle       AssetLifecycleStatus @default(PLANNED)
-  orgUnit         String?
-  typeData        Json? // type-specific fields validated against AssetType.metadataSchema
-  baselineApproved Boolean             @default(false)
+  id                 String               @id @default(uuid()) @db.Uuid
+  code               String               @unique // EP01..EP27
+  name               String
+  assetTypeId        String               @db.Uuid
+  locationId         String               @db.Uuid
+  longitude          Float // canonical asset coordinate (may differ from Location after survey)
+  latitude           Float
+  qrToken            String               @unique // opaque token encoded in the QR
+  lifecycle          AssetLifecycleStatus @default(PLANNED)
+  orgUnit            String?
+  typeData           Json? // type-specific fields validated against AssetType.metadataSchema
+  baselineApproved   Boolean              @default(false)
   baselineApprovedAt DateTime?
-  baselineApproverId String?           @db.Uuid
-  currentReadiness ReadinessStatus     @default(UNKNOWN)
-  version         Int                  @default(0)
-  retiredAt       DateTime?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  baselineApproverId String?              @db.Uuid
+  currentReadiness   ReadinessStatus      @default(UNKNOWN)
+  version            Int                  @default(0)
+  retiredAt          DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
-  assetType         AssetType          @relation(fields: [assetTypeId], references: [id])
-  location          Location           @relation(fields: [locationId], references: [id])
-  baselineApprover  User?              @relation("BaselineApprover", fields: [baselineApproverId], references: [id])
-  components        AssetComponent[]
-  workOrders        WorkOrder[]
-  faults            Fault[]
+  assetType          AssetType           @relation(fields: [assetTypeId], references: [id])
+  location           Location            @relation(fields: [locationId], references: [id])
+  baselineApprover   User?               @relation("BaselineApprover", fields: [baselineApproverId], references: [id])
+  components         AssetComponent[]
+  workOrders         WorkOrder[]
+  faults             Fault[]
   readinessSnapshots ReadinessSnapshot[]
   healthObservations HealthObservation[]
 
@@ -248,19 +264,19 @@ model Asset {
 }
 
 model AssetComponent {
-  id            String          @id @default(uuid()) @db.Uuid
-  assetId       String          @db.Uuid
-  key           String // stable key within asset, e.g. 'sos_button'
-  name          String
-  brand         String?
-  model         String?
-  serial        String?
-  installedAt   DateTime?
-  criticality   Criticality     @default(NON_CRITICAL)
-  status        ComponentStatus @default(UNKNOWN)
-  retiredAt     DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id          String          @id @default(uuid()) @db.Uuid
+  assetId     String          @db.Uuid
+  key         String // stable key within asset, e.g. 'sos_button'
+  name        String
+  brand       String?
+  model       String?
+  serial      String?
+  installedAt DateTime?
+  criticality Criticality     @default(NON_CRITICAL)
+  status      ComponentStatus @default(UNKNOWN)
+  retiredAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   asset Asset @relation(fields: [assetId], references: [id])
 
@@ -272,13 +288,13 @@ model AssetComponent {
 // ─────────────────────────────────────────── Checklist (versioned/immutable) ─
 
 model ChecklistTemplate {
-  id        String    @id @default(uuid()) @db.Uuid
-  key       String    @unique // e.g. 'MONTHLY_FIELD'
+  id        String          @id @default(uuid()) @db.Uuid
+  key       String          @unique // e.g. 'MONTHLY_FIELD'
   name      String
   kind      MaintenanceKind
   retiredAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   versions ChecklistTemplateVersion[]
 
@@ -287,56 +303,85 @@ model ChecklistTemplate {
 
 /// A published version is IMMUTABLE once referenced by any response/plan.
 model ChecklistTemplateVersion {
-  id          String   @id @default(uuid()) @db.Uuid
-  templateId  String   @db.Uuid
+  id          String                 @id @default(uuid()) @db.Uuid
+  templateId  String                 @db.Uuid
   version     Int
+  status      ChecklistVersionStatus @default(DRAFT)
   publishedAt DateTime?
-  isLocked    Boolean  @default(false) // true once used — blocks edits
-  createdAt   DateTime @default(now())
+  retiredAt   DateTime?
+  isLocked    Boolean                @default(false) // true once published/used — blocks edits
+  createdAt   DateTime               @default(now())
 
-  template  ChecklistTemplate @relation(fields: [templateId], references: [id])
-  items     ChecklistItem[]
-  plans     MaintenancePlan[]
-  workOrders WorkOrder[]
-  responses ChecklistResponse[]
+  template    ChecklistTemplate     @relation(fields: [templateId], references: [id])
+  items       ChecklistItem[]
+  fieldGroups ChecklistFieldGroup[]
+  plans       MaintenancePlan[]
+  workOrders  WorkOrder[]
+  responses   ChecklistResponse[]
 
   @@unique([templateId, version])
   @@map("checklist_template_version")
 }
 
 model ChecklistItem {
-  id             String            @id @default(uuid()) @db.Uuid
-  versionId      String            @db.Uuid
-  order          Int
-  code           String // stable within version
-  label          String
-  kind           ChecklistItemKind @default(BOOLEAN_PASS_FAIL)
-  criticality    Criticality       @default(NON_CRITICAL)
+  id                  String            @id @default(uuid()) @db.Uuid
+  versionId           String            @db.Uuid
+  order               Int
+  code                String // stable within version
+  label               String
+  kind                ChecklistItemKind @default(BOOLEAN_PASS_FAIL)
+  criticality         Criticality       @default(NON_CRITICAL)
   criticalFunctionKey String? // maps to a critical function, e.g. 'sos_button'
-  requiresPhoto  Boolean           @default(false)
-  helpText       String?
+  requiresPhoto       Boolean           @default(false)
+  helpText            String?
+  fieldGroupId        String?           @db.Uuid // nullable: ungrouped items (e.g. the general note)
+  memberOrder         Int?
 
-  version   ChecklistTemplateVersion @relation(fields: [versionId], references: [id])
-  responses ChecklistResponse[]
+  version    ChecklistTemplateVersion @relation(fields: [versionId], references: [id])
+  fieldGroup ChecklistFieldGroup?     @relation(fields: [fieldGroupId], references: [id])
+  responses  ChecklistResponse[]
 
   @@unique([versionId, code])
   @@index([versionId])
+  @@index([fieldGroupId])
   @@map("checklist_item")
+}
+
+/// Version-scoped field group. Content (label/help/order/membership/policies) is
+/// frozen when its version is published; editorial change means a new draft version.
+model ChecklistFieldGroup {
+  id                 String                @id @default(uuid()) @db.Uuid
+  checklistVersionId String                @db.Uuid
+  key                String // stable within the version, e.g. 'power_readiness'
+  label              String // Thai display label
+  helpText           String? // Thai help text
+  order              Int
+  required           Boolean               @default(true)
+  reasonPolicy       ChecklistReasonPolicy @default(STANDARD)
+  photoPolicy        ChecklistPhotoPolicy  @default(NONE)
+  createdAt          DateTime              @default(now())
+
+  version ChecklistTemplateVersion @relation(fields: [checklistVersionId], references: [id])
+  members ChecklistItem[]
+
+  @@unique([checklistVersionId, key])
+  @@index([checklistVersionId])
+  @@map("checklist_field_group")
 }
 
 // ─────────────────────────────────────────── Maintenance planning ───────────
 
 model MaintenancePlan {
-  id                String              @id @default(uuid()) @db.Uuid
-  name              String
-  kind              MaintenanceKind
-  frequency         RecurrenceFrequency
-  assetTypeKey      String // scope: which asset type this plan applies to
-  checklistVersionId String             @db.Uuid
-  active            Boolean             @default(true)
-  retiredAt         DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id                 String              @id @default(uuid()) @db.Uuid
+  name               String
+  kind               MaintenanceKind
+  frequency          RecurrenceFrequency
+  assetTypeKey       String // scope: which asset type this plan applies to
+  checklistVersionId String              @db.Uuid
+  active             Boolean             @default(true)
+  retiredAt          DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   checklistVersion ChecklistTemplateVersion @relation(fields: [checklistVersionId], references: [id])
   scheduleBatches  ScheduleBatch[]
@@ -347,17 +392,17 @@ model MaintenancePlan {
 }
 
 model ScheduleBatch {
-  id            String              @id @default(uuid()) @db.Uuid
-  planId        String              @db.Uuid
-  name          String
-  status        ScheduleBatchStatus @default(DRAFT)
-  createdById   String?             @db.Uuid
-  approverId    String?             @db.Uuid
-  approvedAt    DateTime?
-  publishedAt   DateTime?
-  version       Int                 @default(0)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  id          String              @id @default(uuid()) @db.Uuid
+  planId      String              @db.Uuid
+  name        String
+  status      ScheduleBatchStatus @default(DRAFT)
+  createdById String?             @db.Uuid
+  approverId  String?             @db.Uuid
+  approvedAt  DateTime?
+  publishedAt DateTime?
+  version     Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   plan       MaintenancePlan @relation(fields: [planId], references: [id])
   creator    User?           @relation("BatchCreator", fields: [createdById], references: [id])
@@ -429,14 +474,14 @@ model Assignment {
 
 /// Append-only log of state transitions & time events for a work order.
 model WorkLog {
-  id           String           @id @default(uuid()) @db.Uuid
-  workOrderId  String           @db.Uuid
-  fromStatus   WorkOrderStatus?
-  toStatus     WorkOrderStatus
-  actorId      String?          @db.Uuid
-  note         String?
-  occurredAt   DateTime         @default(now())
-  createdAt    DateTime         @default(now())
+  id          String           @id @default(uuid()) @db.Uuid
+  workOrderId String           @db.Uuid
+  fromStatus  WorkOrderStatus?
+  toStatus    WorkOrderStatus
+  actorId     String?          @db.Uuid
+  note        String?
+  occurredAt  DateTime         @default(now())
+  createdAt   DateTime         @default(now())
 
   workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
 
@@ -445,24 +490,24 @@ model WorkLog {
 }
 
 model ChecklistResponse {
-  id                String         @id @default(uuid()) @db.Uuid
-  workOrderId       String         @db.Uuid
-  itemId            String         @db.Uuid
-  checklistVersionId String        @db.Uuid
-  result            ResponseResult
-  valueText         String?
-  valueNumber       Float?
-  note              String?
+  id                 String         @id @default(uuid()) @db.Uuid
+  workOrderId        String         @db.Uuid
+  itemId             String         @db.Uuid
+  checklistVersionId String         @db.Uuid
+  result             ResponseResult
+  valueText          String?
+  valueNumber        Float?
+  note               String?
   // GPS capture at time of inspection
-  capturedLat       Float?
-  capturedLng       Float?
-  distanceMeters    Float?
-  locationException Boolean        @default(false)
-  locationReason    String?
-  reviewFlag        Boolean        @default(false)
-  clientMutationId  String?        @unique // offline idempotency
-  observedAt        DateTime
-  createdAt         DateTime       @default(now())
+  capturedLat        Float?
+  capturedLng        Float?
+  distanceMeters     Float?
+  locationException  Boolean        @default(false)
+  locationReason     String?
+  reviewFlag         Boolean        @default(false)
+  clientMutationId   String?        @unique // offline idempotency
+  observedAt         DateTime
+  createdAt          DateTime       @default(now())
 
   workOrder        WorkOrder                @relation(fields: [workOrderId], references: [id])
   item             ChecklistItem            @relation(fields: [itemId], references: [id])
@@ -475,24 +520,24 @@ model ChecklistResponse {
 }
 
 model Fault {
-  id             String      @id @default(uuid()) @db.Uuid
-  code           String      @unique // FLT-YYYY-NNNN
-  assetId        String      @db.Uuid
-  originWorkOrderId String?  @db.Uuid
-  severity       Criticality
-  status         FaultStatus @default(OPEN)
-  symptom        String
-  sourceRef      String? // e.g. checklist item / critical function key
-  detectedAt     DateTime    @default(now())
-  resolvedAt     DateTime?
-  version        Int         @default(0)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id                String      @id @default(uuid()) @db.Uuid
+  code              String      @unique // FLT-YYYY-NNNN
+  assetId           String      @db.Uuid
+  originWorkOrderId String?     @db.Uuid
+  severity          Criticality
+  status            FaultStatus @default(OPEN)
+  symptom           String
+  sourceRef         String? // e.g. checklist item / critical function key
+  detectedAt        DateTime    @default(now())
+  resolvedAt        DateTime?
+  version           Int         @default(0)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
-  asset           Asset          @relation(fields: [assetId], references: [id])
-  originWorkOrder WorkOrder?     @relation("FaultOriginWorkOrder", fields: [originWorkOrderId], references: [id])
-  correctiveWorkOrder WorkOrder? @relation("FaultCorrectiveWorkOrder")
-  repairActions   RepairAction[]
+  asset               Asset          @relation(fields: [assetId], references: [id])
+  originWorkOrder     WorkOrder?     @relation("FaultOriginWorkOrder", fields: [originWorkOrderId], references: [id])
+  correctiveWorkOrder WorkOrder?     @relation("FaultCorrectiveWorkOrder")
+  repairActions       RepairAction[]
 
   @@index([assetId])
   @@index([status])
@@ -500,16 +545,16 @@ model Fault {
 }
 
 model RepairAction {
-  id            String    @id @default(uuid()) @db.Uuid
-  faultId       String    @db.Uuid
-  workOrderId   String    @db.Uuid
-  cause         String
+  id             String   @id @default(uuid()) @db.Uuid
+  faultId        String   @db.Uuid
+  workOrderId    String   @db.Uuid
+  cause          String
   fixDescription String
-  changedParts  String? // free text (no inventory in V1)
-  retestPassed  Boolean?
-  retestNote    String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  changedParts   String? // free text (no inventory in V1)
+  retestPassed   Boolean?
+  retestNote     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   fault       Fault        @relation(fields: [faultId], references: [id])
   workOrder   WorkOrder    @relation(fields: [workOrderId], references: [id])
@@ -522,20 +567,20 @@ model RepairAction {
 // ─────────────────────────────────────────── Evidence & health ──────────────
 
 model Attachment {
-  id                 String  @id @default(uuid()) @db.Uuid
+  id                  String    @id @default(uuid()) @db.Uuid
   // polymorphic owner (kept alongside typed FKs for the common cases)
-  entityType         String // 'CHECKLIST_RESPONSE' | 'REPAIR_ACTION' | 'ASSET' | ...
-  entityId           String  @db.Uuid
-  checklistResponseId String? @db.Uuid
-  repairActionId     String? @db.Uuid
-  storageKey         String  @unique // opaque key in private storage
-  originalName       String
-  mimeType           String
-  sizeBytes          Int
-  checksumSha256     String
-  phase              String? // 'BEFORE' | 'AFTER' | null
-  capturedAt         DateTime?
-  createdAt          DateTime @default(now())
+  entityType          String // 'CHECKLIST_RESPONSE' | 'REPAIR_ACTION' | 'ASSET' | ...
+  entityId            String    @db.Uuid
+  checklistResponseId String?   @db.Uuid
+  repairActionId      String?   @db.Uuid
+  storageKey          String    @unique // opaque key in private storage
+  originalName        String
+  mimeType            String
+  sizeBytes           Int
+  checksumSha256      String
+  phase               String? // 'BEFORE' | 'AFTER' | null
+  capturedAt          DateTime?
+  createdAt           DateTime  @default(now())
 
   checklistResponse ChecklistResponse? @relation(fields: [checklistResponseId], references: [id])
   repairAction      RepairAction?      @relation(fields: [repairActionId], references: [id])
@@ -545,22 +590,22 @@ model Attachment {
 }
 
 model HealthObservation {
-  id              String       @id @default(uuid()) @db.Uuid
-  assetId         String?      @db.Uuid
+  id               String        @id @default(uuid()) @db.Uuid
+  assetId          String?       @db.Uuid
   externalAssetKey String?
-  sourceId        String?      @db.Uuid
-  importBatchId   String?      @db.Uuid
-  source          HealthSource
-  overallStatus   HealthStatus
-  componentKey    String?
-  componentStatus HealthStatus?
-  observedAt      DateTime
-  rawChecksum     String?
-  createdAt       DateTime     @default(now())
+  sourceId         String?       @db.Uuid
+  importBatchId    String?       @db.Uuid
+  source           HealthSource
+  overallStatus    HealthStatus
+  componentKey     String?
+  componentStatus  HealthStatus?
+  observedAt       DateTime
+  rawChecksum      String?
+  createdAt        DateTime      @default(now())
 
   asset       Asset?             @relation(fields: [assetId], references: [id])
   source_     IntegrationSource? @relation(fields: [sourceId], references: [id])
-  importBatch ImportBatch?     @relation(fields: [importBatchId], references: [id])
+  importBatch ImportBatch?       @relation(fields: [importBatchId], references: [id])
 
   @@index([assetId])
   @@index([observedAt])
@@ -570,12 +615,12 @@ model HealthObservation {
 /// Immutable computed readiness result + reasons (append-only). One row per
 /// transition (doc 01/08). Never updated or deleted.
 model ReadinessSnapshot {
-  id         String          @id @default(uuid()) @db.Uuid
-  assetId    String          @db.Uuid
+  id         String           @id @default(uuid()) @db.Uuid
+  assetId    String           @db.Uuid
   status     ReadinessStatus
   reasons    Json // ReadinessReason[] from the domain engine
   trigger    ReadinessTrigger
-  computedAt DateTime        @default(now())
+  computedAt DateTime         @default(now())
 
   asset Asset @relation(fields: [assetId], references: [id])
 
@@ -607,15 +652,15 @@ model Notification {
 }
 
 model IntegrationSource {
-  id          String    @id @default(uuid()) @db.Uuid
-  key         String    @unique
-  name        String
-  kind        String // 'MANUAL' | 'CSV' | 'SNMP' | 'API'
-  config      Json?
-  active      Boolean   @default(true)
-  retiredAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(uuid()) @db.Uuid
+  key       String    @unique
+  name      String
+  kind      String // 'MANUAL' | 'CSV' | 'SNMP' | 'API'
+  config    Json?
+  active    Boolean   @default(true)
+  retiredAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   importBatches      ImportBatch[]
   healthObservations HealthObservation[]
@@ -624,20 +669,20 @@ model IntegrationSource {
 }
 
 model ImportBatch {
-  id            String       @id @default(uuid()) @db.Uuid
-  sourceId      String?      @db.Uuid
-  kind          String // 'ASSET_REGISTRY' | 'HEALTH_OBSERVATION'
-  fileName      String
-  fileChecksum  String
-  status        ImportStatus @default(UPLOADED)
-  totalRows     Int          @default(0)
-  validRows     Int          @default(0)
-  errorRows     Int          @default(0)
-  rowErrors     Json? // [{ row, field, message }]
-  actorId       String?      @db.Uuid
-  committedAt   DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id           String       @id @default(uuid()) @db.Uuid
+  sourceId     String?      @db.Uuid
+  kind         String // 'ASSET_REGISTRY' | 'HEALTH_OBSERVATION'
+  fileName     String
+  fileChecksum String
+  status       ImportStatus @default(UPLOADED)
+  totalRows    Int          @default(0)
+  validRows    Int          @default(0)
+  errorRows    Int          @default(0)
+  rowErrors    Json? // [{ row, field, message }]
+  actorId      String?      @db.Uuid
+  committedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   source             IntegrationSource?  @relation(fields: [sourceId], references: [id])
   healthObservations HealthObservation[]
