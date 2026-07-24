@@ -67,3 +67,13 @@ export {
   type GroupOutcome,
   type MemberState,
 } from './canonicalize';
+
+export {
+  validateChecklistVersionForPublish,
+  SUPPORTED_REASON_POLICIES,
+  SUPPORTED_PHOTO_POLICIES_ON_PUBLISH,
+  type PublishValidationInput,
+  type PublishValidationResult,
+  type DraftGroupDef,
+  type DraftItemDef,
+} from './version-lifecycle';
