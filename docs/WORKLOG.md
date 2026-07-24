@@ -90,9 +90,17 @@ this slice only contributes the grouped-check-pass→readiness and
 critical-fail→DOWN+Fault portions respectively, proven by the integration
 tests, not the full UAT scenario. Public Vercel URL is still an **OPEN
 security exception**; Neon credential rotation still required before release;
-final QA/UAT + redeploy not run. Task 16 (push + CI watch) intentionally not
-run in this slice — see the next entry once it happens (or the top of
-`docs/RESUME_HERE.md` for current status).
+final QA/UAT + redeploy not run.
+
+**Task 16 (push + CI), completed same session:** pushed `0e6c2d0..8727436` to
+`origin/main` (15 commits). GitHub Actions run
+[`30086016629`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30086016629):
+both `quality` (44s: format check, typecheck, lint, unit tests, build) and
+`integration` (58s: `db:setup` incl. `db:checklist:v2` → `test:integration`) —
+**both SUCCESS**. Notably, `integration` was green **including** the two cases
+that fail on this developer's local DB — CI's ephemeral Postgres starts fresh
+every run, confirming those two local failures really are local-environment
+state (stale guarded-demo data), not a defect this slice introduced.
 
 ---
 
