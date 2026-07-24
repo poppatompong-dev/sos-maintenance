@@ -127,6 +127,7 @@ export function createPrismaInspectionPort(
               capturedLng: input.gps.lng,
               distanceMeters: input.gps.distanceMeters,
               locationException: input.gps.isException,
+              locationReason: input.gps.reason ?? null,
               reviewFlag: input.gps.reviewFlag,
               clientMutationId: i === 0 ? input.mutationId : null,
               observedAt,

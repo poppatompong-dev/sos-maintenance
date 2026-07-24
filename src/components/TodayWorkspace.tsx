@@ -18,6 +18,7 @@ import {
   type GroupOutcome,
   type MemberState,
 } from '@/presentation/thai-labels';
+import { evaluateGpsCapture } from '@/domain/geo';
 
 interface SyncFieldGroupMember {
   memberKey: string;
@@ -184,11 +185,20 @@ function InspectionForm({
   const [mutationId, setMutationId] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gpsPosition, setGpsPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsReason, setGpsReason] = useState('');
 
   const remaining = useMemo(
     () => workOrder.groups.filter((g) => !groupComplete(g, answers[g.key] ?? emptyAnswer())).length,
     [answers, workOrder.groups],
   );
+
+  // Client-side guidance only — the server independently recomputes this from
+  // the pinned asset location and is the authoritative trust boundary.
+  const gpsCheck = gpsPosition
+    ? evaluateGpsCapture({ lat: workOrder.asset.latitude, lng: workOrder.asset.longitude }, gpsPosition)
+    : null;
+  const needsGpsReason = Boolean(gpsCheck?.requiresReason) && gpsReason.trim().length === 0;
 
   function update(groupKey: string, patch: Partial<GroupAnswer>) {
     setAnswers((cur) => ({ ...cur, [groupKey]: { ...emptyAnswer(), ...cur[groupKey], ...patch } }));
@@ -204,14 +214,26 @@ function InspectionForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!online || remaining > 0 || working) return;
+    if (!online || remaining > 0 || working || needsGpsReason) return;
     setWorking(true);
     setError(null);
-    const currentMutationId = mutationId ?? crypto.randomUUID();
-    if (!mutationId) setMutationId(currentMutationId);
 
     try {
-      const gps = await getCurrentPosition();
+      const position = gpsPosition ?? (await getCurrentPosition());
+      if (!gpsPosition) setGpsPosition(position);
+      const check = evaluateGpsCapture(
+        { lat: workOrder.asset.latitude, lng: workOrder.asset.longitude },
+        position,
+      );
+      if (check.requiresReason && !gpsReason.trim()) {
+        // Reveal the required reason field below; technician fills it in and
+        // submits again. The server enforces this regardless of client state.
+        return;
+      }
+
+      const currentMutationId = mutationId ?? crypto.randomUUID();
+      if (!mutationId) setMutationId(currentMutationId);
+
       const groups = workOrder.groups.map((g) => {
         const a = answers[g.key] ?? emptyAnswer();
         if (a.outcome === 'PROBLEM') {
@@ -231,7 +253,7 @@ function InspectionForm({
         workOrderId: workOrder.id,
         groups,
         ...(generalNote.trim() ? { generalNote: generalNote.trim() } : {}),
-        gps,
+        gps: check.requiresReason ? { ...position, reason: gpsReason.trim() } : position,
       };
       const envelope = {
         mutationId: currentMutationId,
@@ -370,17 +392,46 @@ function InspectionForm({
             className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-bg px-3 py-2 text-sm text-ink"
           />
         </label>
+
+        {gpsCheck?.requiresReason ? (
+          <div className="rounded-xl border border-watch-tint bg-watch-tint/40 p-3">
+            <p className="flex items-start gap-2 text-xs text-watch-ink">
+              <MapPinIcon size={16} />
+              ตำแหน่งที่บันทึกอยู่ห่างจากจุดติดตั้งประมาณ {Math.round(gpsCheck.distanceMeters)} เมตร
+            </p>
+            <label className="mt-2 block text-xs text-ink" htmlFor={`gps-reason-${workOrder.code}`}>
+              เหตุผลที่ตำแหน่งห่างจากจุดติดตั้งเกิน 100 เมตร (จำเป็น)
+              <textarea
+                id={`gps-reason-${workOrder.code}`}
+                value={gpsReason}
+                onChange={(e) => setGpsReason(e.target.value)}
+                required
+                rows={2}
+                className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-bg px-3 py-2 text-sm text-ink"
+              />
+            </label>
+            {needsGpsReason ? (
+              <p role="alert" className="mt-2 text-xs text-down-ink">กรุณาระบุเหตุผลก่อนส่งผลตรวจ</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {error ? <p role="alert" className="mt-3 rounded-xl bg-down-tint px-3 py-3 text-xs text-down-ink">{error}</p> : null}
       {!online ? <p className="mt-3 text-xs text-watch-ink">ออฟไลน์ — เชื่อมต่ออินเทอร์เน็ตก่อนส่งผลตรวจ</p> : null}
       <button
         type="submit"
-        disabled={!online || remaining > 0 || working}
+        disabled={!online || remaining > 0 || working || needsGpsReason}
         className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         <CheckCircleIcon size={18} />
-        {working ? 'กำลังบันทึกผลตรวจ…' : remaining > 0 ? `ตอบให้ครบอีก ${remaining} กลุ่ม` : 'ส่งผลตรวจ'}
+        {working
+          ? 'กำลังบันทึกผลตรวจ…'
+          : remaining > 0
+            ? `ตอบให้ครบอีก ${remaining} กลุ่ม`
+            : needsGpsReason
+              ? 'กรุณาระบุเหตุผลตำแหน่งก่อนส่ง'
+              : 'ส่งผลตรวจ'}
       </button>
     </form>
   );

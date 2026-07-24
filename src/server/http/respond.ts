@@ -27,6 +27,7 @@ function inspectionStatus(code: string): number {
     case 'INVALID_ENVELOPE':
     case 'NO_CHECKLIST_VERSION':
     case 'NO_FIELD_GROUPS':
+    case 'GPS_REASON_REQUIRED':
       return 400;
     default:
       return 409; // conflict / unprocessable domain state

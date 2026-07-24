@@ -132,4 +132,33 @@ describe('POST /api/inspections (grouped)', () => {
     expect(untestable.status).toBe(201);
     expect((await untestable.json()).readiness.status).not.toBe('READY');
   });
+
+  it('400 GPS_REASON_REQUIRED + no new rows when capture is >100 m out with no reason', async () => {
+    const before = await prisma.checklistResponse.count({ where: { workOrderId } });
+    const res = await post(envelope({
+      workOrderId,
+      groups: [{ groupKey: 'g_sos', outcome: 'NORMAL' }],
+      gps: { lat: LAT + 0.01, lng: LNG }, // ~1.1 km north, no reason
+    }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('GPS_REASON_REQUIRED');
+    expect(await prisma.checklistResponse.count({ where: { workOrderId } })).toBe(before);
+  });
+
+  it('201 + persists locationReason and keeps the review flag when a reason is given for a >100 m capture', async () => {
+    const reason = 'จุดจอดรถทางเข้าไม่ตรงกับตำแหน่งเสา';
+    const res = await post(envelope({
+      workOrderId,
+      groups: [{ groupKey: 'g_sos', outcome: 'NORMAL' }],
+      gps: { lat: LAT + 0.01, lng: LNG, reason },
+    }));
+    expect(res.status).toBe(201);
+
+    const rows = await prisma.checklistResponse.findMany({ where: { workOrderId, locationReason: reason } });
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.reviewFlag).toBe(true);
+      expect(row.locationException).toBe(true);
+    }
+  });
 });
