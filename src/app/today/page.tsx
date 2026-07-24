@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { SyncState } from '@/components/SyncState';
 import { TodayWorkspace } from '@/components/TodayWorkspace';
 import {
@@ -21,11 +22,12 @@ const TH_WEEKDAYS = [
   'เสาร์',
 ];
 
+/** `href: null` means the destination doesn't exist yet — shown disabled, never a dead link. */
 const BOTTOM_NAV = [
-  { key: 'today', label: 'วันนี้', Icon: ListIcon, active: true },
-  { key: 'scan', label: 'สแกน QR', Icon: ScanIcon, active: false },
-  { key: 'mine', label: 'งานของฉัน', Icon: ClipboardIcon, active: false },
-  { key: 'alerts', label: 'แจ้งเตือน', Icon: BellIcon, active: false },
+  { key: 'today', label: 'วันนี้', Icon: ListIcon, href: '/today' },
+  { key: 'scan', label: 'สแกน QR', Icon: ScanIcon, href: null },
+  { key: 'mine', label: 'งานของฉัน', Icon: ClipboardIcon, href: null },
+  { key: 'alerts', label: 'แจ้งเตือน', Icon: BellIcon, href: null },
 ];
 
 /** Technician field-first shell (direction B): today, scan, my jobs. Mobile-first. */
@@ -90,20 +92,33 @@ export default function TodayPage() {
         aria-label="เมนูเจ้าหน้าที่"
         className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-md items-center justify-around border-t border-border bg-surface px-2 py-2"
       >
-        {BOTTOM_NAV.map(({ key, label, Icon, active }) => (
-          <a
-            key={key}
-            href="#"
-            aria-label={label}
-            aria-current={active ? 'page' : undefined}
-            className={`flex min-h-[44px] min-w-[56px] flex-col items-center justify-center gap-1 rounded-xl text-[0.625rem] font-medium ${
-              active ? 'text-brand' : 'text-muted'
-            }`}
-          >
-            <Icon size={22} />
-            {label}
-          </a>
-        ))}
+        {BOTTOM_NAV.map(({ key, label, Icon, href }) => {
+          if (!href) {
+            return (
+              <span
+                key={key}
+                aria-disabled="true"
+                title={`${label} (เร็วๆ นี้)`}
+                className="flex min-h-[44px] min-w-[56px] cursor-not-allowed flex-col items-center justify-center gap-1 rounded-xl text-[0.625rem] font-medium text-muted/40"
+              >
+                <Icon size={22} />
+                {label}
+              </span>
+            );
+          }
+          return (
+            <Link
+              key={key}
+              href={href}
+              aria-label={label}
+              aria-current="page"
+              className="flex min-h-[44px] min-w-[56px] flex-col items-center justify-center gap-1 rounded-xl text-[0.625rem] font-medium text-brand"
+            >
+              <Icon size={22} />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

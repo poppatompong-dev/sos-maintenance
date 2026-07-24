@@ -39,7 +39,7 @@ export default async function WorkOrdersPage() {
 
   return (
     <div className="min-h-full">
-      <AppRail />
+      <AppRail current="work" />
       <div className="pb-16 md:pb-0 md:pl-[76px]">
         <div className="mx-auto max-w-[1440px] px-5 md:px-8">
           <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border py-5 md:py-6">

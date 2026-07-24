@@ -21,7 +21,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-full">
-      <AppRail />
+      <AppRail current="overview" />
 
       <div className="pb-16 md:pb-0 md:pl-[76px]">
         <div className="mx-auto max-w-[1440px] px-5 md:px-8">
@@ -41,8 +41,11 @@ export default async function DashboardPage() {
               </span>
               <button
                 type="button"
-                aria-label="การแจ้งเตือน"
-                className="grid size-10 place-items-center rounded-xl border border-border bg-surface text-muted hover:text-ink"
+                disabled
+                aria-disabled="true"
+                aria-label="การแจ้งเตือน (เร็วๆ นี้)"
+                title="การแจ้งเตือน (เร็วๆ นี้)"
+                className="grid size-10 cursor-not-allowed place-items-center rounded-xl border border-border bg-surface text-muted/40"
               >
                 <BellIcon size={18} />
               </button>
@@ -90,15 +93,21 @@ export default async function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <a
-                  href="#"
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  title="รอระบบบันทึกรูปถ่ายภาคสนามก่อนจึงจะเริ่มสำรวจได้"
+                  className="mt-4 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-border bg-panel px-4 py-2.5 text-sm font-semibold text-muted"
                 >
                   <ClipboardIcon size={17} />
                   เริ่มสำรวจตั้งต้น
-                </a>
+                </button>
                 <p className="mt-3 text-center text-xs text-muted tabular-nums">
                   {needSurvey} จุดรอการสำรวจ
+                </p>
+                <p className="mt-1.5 text-center text-[0.6875rem] leading-relaxed text-muted/80">
+                  ยังเริ่มไม่ได้ — รอระบบบันทึกรูปถ่ายภาคสนาม (การสำรวจตั้งต้นต้องมีหลักฐานภาพ)
                 </p>
               </div>
             </aside>

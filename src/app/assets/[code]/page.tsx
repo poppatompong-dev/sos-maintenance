@@ -45,7 +45,7 @@ export default async function AssetDetailPage({
 
   return (
     <div className="min-h-full">
-      <AppRail />
+      <AppRail current={null} />
       <div className="pb-16 md:pb-0 md:pl-[76px]">
         <div className="mx-auto max-w-[1200px] px-5 md:px-8">
           <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border py-5 md:py-6">
