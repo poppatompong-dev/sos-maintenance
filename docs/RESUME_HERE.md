@@ -5,19 +5,25 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-24 (flexible field checklist **implemented**, Tasks 1–16 of
-the plan complete and pushed; GPS >100m mandatory reason is the next ordered
-slice; QA/UAT gate still NOT closed — do not claim production-ready)._
+_Last updated: 2026-07-24 (flexible field checklist **implemented** AND GPS
+>100m mandatory reason **implemented, closing UAT case 8**; QA/UAT gate as a
+whole still NOT closed — do not claim production-ready)._
 
-## ▶ Next slice: GPS >100m mandatory reason (UAT case 8)
-With the flexible grouped monthly checklist now live, the next ordered slice is
-wiring the GPS **>100 m mandatory reason**: `ChecklistResponse.locationReason`
-already exists in the schema and the review flag already works, but the
-DTO/service/UI path that *collects and persists* a required reason when the
-captured position is >100 m from the asset is still missing. Domain-first, with
-tests, following the same TDD/small-commit pattern as the checklist slice. This
-closes **UAT case 8** (`docs/spec/06`) — still open until this lands and is
-tested.
+## ▶ Next: security boundary + Neon credential rotation (need the account owner)
+Both open engineering slices from the prior handoff are now done: the flexible
+grouped checklist and the GPS >100m mandatory reason (UAT case 8). What's left
+on the release-blocker list is **not code** — it needs the project owner's
+direct action:
+1. **Network boundary for the public Vercel URL** — `AUTH_MODE=internal` gives
+   every reachable caller full permissions; the deployed URL must be restricted
+   (VPN / IP allowlist / Vercel deployment protection) or the exposure must be
+   explicitly, formally accepted as a risk. Not resolved.
+2. **Rotate the Neon production DB credential** — it was exposed during a prior
+   setup communication. Requires the owner's Neon dashboard access.
+
+Once both land, the remaining step is a redeploy + the formal
+`docs/spec/06_DELIVERY_QA_UAT.md` gate with the internal-mode exception
+recorded (see "Next steps" below).
 
 **ดูสถานะ milestone และหลักฐานล่าสุด:** [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md)
 
@@ -25,8 +31,9 @@ tested.
 แล้วส่งต่อ [`HANDOFF_CLAUDE.md`](HANDOFF_CLAUDE.md) ให้ Claude Code
 
 ## Where we are
-- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ — implementation is in the working tree and pushed, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below), and `/today` now renders 5 Thai field groups instead of 10 flat items.
-- **Tests:** `pnpm test` → **224 passing** (26 files). Locally, DB-backed integration → **48 passing / 2 failing (11 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression). `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green. **CI (fresh ephemeral DB) is fully green including both jobs** — Actions run [`30086016629`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30086016629), commit `8727436`: `quality` 44s, `integration` 58s, both SUCCESS — confirming the 2 local failures are purely local-environment state. (Prior CI-green baseline before this slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
+- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ — implementation is in the working tree and pushed, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
+- **Tests:** `pnpm test` → **231 passing** (26 files). Locally, DB-backed integration → **50 passing / 2 failing (11 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice, unrelated to GPS wiring). `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green. CI was last confirmed fully green on Actions run [`30086016629`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30086016629) (checklist slice, commit `8727436`) — re-confirm CI on the GPS-wiring commits before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
+- **GPS >100m mandatory reason — DONE, see `docs/WORKLOG.md` 2026-07-24 entry for full detail.** `submitInspection` now rejects (`GPS_REASON_REQUIRED`, 400) a >100m capture with no non-blank reason, before persisting anything; a reason is persisted to `ChecklistResponse.locationReason` alongside the existing `distanceMeters`/`locationException`/`reviewFlag`; `/today` reveals a required reason field client-side as UX guidance once GPS is captured, but the server remains authoritative. Live-server end-to-end proof (throwaway fixture, cleaned up, guarded demo untouched): no reason → 400; with reason → 201 + persisted evidence with `reviewFlag`/`locationException` both `true`. **This closes UAT case 8** (`docs/spec/06`).
 - **Local Docker Desktop + PostGIS is now healthy on this machine**, so hands-on `/today` workflow UAT ran against a real local DB. Do **not** fabricate production work orders — the demo fixture is guarded, local-`sos`-only, and fail-closed.
 - **Flexible field checklist — DONE, see `docs/WORKLOG.md` 2026-07-24 entry for full detail.** Monthly checklist v2 (5 Thai outcome-oriented groups + 1 optional note) is now the active definition (`pnpm db:checklist:v2`, chained into `pnpm db:setup`); legacy v1 stays frozen/untouched and renders a Thai reissue advisory. Server-side canonicalization (`src/domain/checklist/canonicalize.ts`) means the client can no longer supply criticality/function keys. Browser-verified end-to-end on `http://localhost:3100/today` against the new `DEMO-LOCAL-EP01-MONTHLY-V2` demo: card render → `เริ่มงาน` (200) → all 5 groups `ปกติ` → submit → `POST /api/inspections` 201 → `SUBMITTED`, no console errors, no PASS/FAIL/enum leakage in the accessibility tree. DB evidence: 10 `ChecklistResponse` rows under 1 `clientMutationId`, 1 fresh `ReadinessSnapshot` (status `UNKNOWN`/`NO_APPROVED_BASELINE` — expected, unrelated to this slice: EP01's baseline was never approved). **This slice does NOT close UAT #3/#4/#8** — see the WORKLOG entry for exactly what it does and doesn't prove.
 - **Prior workflow slice (v1, still valid history):** `/today` loads the real sync bootstrap, shows open field work orders, starts assigned work, captures GPS/checklist results, submits idempotent evidence, and advances the work order to `SUBMITTED`. **After submit, `/today` correctly shows zero open work orders for that WO** — `SUBMITTED` is excluded from the open-order bootstrap; confirm success via API/DB, not a persistent pill.
@@ -61,13 +68,10 @@ connected and verified earlier; do not commit the connection string — keep it 
 deployment/local secret configuration only. **Neon credential rotation remains a
 release gate** because the credential was exposed during setup communication.
 
-## Known gap (blocks a release claim)
-**GPS >100m mandatory reason wiring is missing.** The schema column
-`ChecklistResponse.locationReason` **already exists** (and the review flag works),
-but the DTO/service/UI path that *collects and persists* a required reason when the
-captured position is >100m from the asset is **not yet wired**, so **UAT case 8
-(`docs/spec/06`) is not complete**. Do not mark QA/UAT done until this wiring is
-represented and tested. This is a wiring slice, not a schema change.
+## Known gaps (block a release claim)
+GPS >100m mandatory reason wiring is **done** (see above) — UAT case 8 is
+closed. What remains before a release claim is entirely non-code: the public
+Vercel URL's network boundary and Neon credential rotation, both below.
 
 ## Next steps (in order)
 1. ~~**Safe test environment + guarded demo fixture**~~ — **DONE.** Local Docker
@@ -86,11 +90,10 @@ represented and tested. This is a wiring slice, not a schema change.
    readiness/auth/offline change. Full detail + exact test evidence in
    `docs/WORKLOG.md` (2026-07-24 entry). This slice does **not** close UAT case 8
    (below) and does **not** claim the QA/UAT gate.
-4. **GPS >100m reason (NEXT).** The `ChecklistResponse.locationReason` column
-   already exists — add the missing DTO/service/UI wiring (domain first, with
-   tests) to collect and persist the mandatory reason and close **UAT case 8**.
-   Still an open release blocker.
-5. **Security boundary:** `AUTH_MODE=internal` itself is owner-approved, but the
+4. ~~**GPS >100m reason**~~ — **DONE (2026-07-24).** Domain-first with tests;
+   closes **UAT case 8**. Full detail + exact test evidence in
+   `docs/WORKLOG.md` (2026-07-24 entry).
+5. **Security boundary (NEXT — needs the account owner, not code):** `AUTH_MODE=internal` itself is owner-approved, but the
    **public Vercel URL remains an OPEN security exception** — every reachable
    caller gets full permissions. It must be restricted to the municipality's
    internal network / private access layer, or explicitly accepted by the owner

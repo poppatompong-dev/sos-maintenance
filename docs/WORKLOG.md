@@ -5,6 +5,71 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-24 — GPS >100m mandatory reason wired (UAT case 8 closed)
+
+**FACT:** Wired the GPS `>100 m` mandatory-reason rule end to end, domain-first
+with tests, following the checklist slice's TDD/small-commit pattern (5 commits:
+`a62abd1` domain, `8f7f235` service, `3a9cc49` DTO, `dd34b68` persist/HTTP/UI):
+
+- `src/domain/geo/index.ts` — pure `gpsReasonMissing(evaluation, reason)`; the
+  pre-existing `evaluateGpsCapture` (already computed `requiresReason`/
+  `reviewFlag`) is unchanged.
+- `src/server/services/submit-inspection.ts` — `submitInspection` now throws
+  `InspectionError('GPS_REASON_REQUIRED', ...)` *before persisting anything*
+  when the capture is >100 m out and no non-blank reason was supplied; the
+  reason threads through to `PersistInspectionInput.gps.reason`.
+- `src/server/dto/schemas.ts` — `gpsSchema` gained an optional `reason` string
+  (the conditional-required rule stays server/domain-side, not in Zod, since
+  Zod cannot know the asset's position).
+- `src/server/adapters/prisma-inspection-port.ts` — `persist()` now writes
+  `locationReason` on every `ChecklistResponse` row alongside the existing
+  `distanceMeters`/`locationException`/`reviewFlag` fields (the column already
+  existed in the schema, unused until now).
+- `src/server/http/respond.ts` — `GPS_REASON_REQUIRED` → 400.
+- `src/components/TodayWorkspace.tsx` — after GPS capture, the client
+  recomputes the same pure `evaluateGpsCapture` (imported from
+  `@/domain/geo`, safe client-side — no IO) purely as UX guidance; if the
+  capture looks >100 m out it reveals a required Thai-labelled reason field
+  and blocks the local submit button until filled, then sends it as
+  `gps.reason`. The server check is authoritative regardless of what the
+  client sends.
+
+**Test evidence:**
+- `pnpm test` → **231 passing (26 files)** (224 baseline + 7 new: 3 domain,
+  4 service).
+- `pnpm test:integration` → **50 passing / 2 failing (11 files)** locally — the
+  2 failures are the same pre-existing `src/app/api/read-routes.itest.ts`
+  local-DB-state artifacts documented in the checklist-slice entry below
+  (asserting an empty "fresh seed" against a local DB that permanently carries
+  demo/rollout data); unrelated file, not touched by this slice, same failure
+  signature before and after. 2 new integration tests added to
+  `src/app/api/inspections/route.itest.ts` (400 + no new rows without a
+  reason; 201 + `locationReason` persisted with `reviewFlag`/
+  `locationException` unchanged with a reason) — both pass.
+- `pnpm typecheck` / `pnpm lint` / `pnpm build` / `git diff --check` — all
+  clean throughout.
+- **Live-server end-to-end proof:** started a fresh `pnpm dev` on port 3100
+  (`AUTH_MODE=internal`) and drove `POST /api/inspections` against a
+  throwaway, fully-cleaned-up fixture (never touched the guarded demo work
+  order): a >100 m capture with no reason → `400 GPS_REASON_REQUIRED`; the
+  same capture with a reason → `201`, `readiness.status: READY`,
+  `gps.reviewFlag: true`; the persisted `ChecklistResponse` row carried the
+  exact `locationReason` text with `reviewFlag`/`locationException` both
+  `true`.
+
+**UAT case 8 (`docs/spec/06`, "GPS >100m reason + review flag") is now closed**
+by this evidence — reason is mandatory and persisted, review flag still fires,
+in-range captures are unaffected (regression-covered by the pre-existing
+in-range unit/integration tests, unchanged).
+
+**Not in scope / unchanged:** readiness computation, RBAC, the checklist
+group-outcome canonicalization, offline queue, photo capture, auth/Keycloak.
+This closes one item on the release-blocker list; the public-Vercel-URL
+network boundary and Neon credential rotation remain separate, open blockers
+that need the account owner, not code.
+
+---
+
 ## 2026-07-24 — Flexible field checklist: implemented (Tasks 1–15 of 16)
 
 **FACT:** Executed `docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`
