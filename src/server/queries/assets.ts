@@ -91,6 +91,18 @@ const ACTIVE_WO_STATUSES = [
   'REOPENED',
 ] as const;
 
+/** Resolve a scanned QR payload to its asset's business code, or null when unknown. */
+export async function getAssetCodeByQrToken(
+  qrToken: string,
+  client: PrismaClient = defaultPrisma,
+): Promise<string | null> {
+  const a = await client.asset.findUnique({
+    where: { qrToken },
+    select: { code: true },
+  });
+  return a?.code ?? null;
+}
+
 /** Full asset detail by business code (EP01..), or null when not found. */
 export async function getAssetDetail(
   code: string,

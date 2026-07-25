@@ -5,6 +5,61 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-25 — QR scan wired (Technician nav slot 2 of 3)
+
+**FACT:** The Technician bottom nav's "สแกน QR" slot (spec doc 08 line 191,
+"สแกน QR เพื่อเปิด asset ที่ถูกต้อง"; doc 08 line 317 names it one of exactly
+3 Technician nav destinations) had a real icon but `href: null` since the
+nav-honesty fix (`efba3c3`) — no scanning code existed anywhere. This slice
+wires it end-to-end:
+
+- `/today/scan` (`src/app/today/scan/page.tsx`) — new client page. Camera
+  access via `navigator.mediaDevices.getUserMedia({ video: { facingMode:
+  'environment' } })`, mirroring the existing `navigator.geolocation` pattern
+  in `TodayWorkspace.tsx`. Frames are sampled onto a canvas and decoded
+  locally with `jsqr` (Apache-2.0, added as the only new runtime dependency;
+  no video ever leaves the device).
+- The decoded QR payload is **never trusted as an asset code directly** — it's
+  resolved server-side via a new endpoint, `GET /api/assets/by-qr/:token`
+  (`src/app/api/assets/by-qr/[token]/route.ts` +
+  `src/server/queries/assets.ts` `getAssetCodeByQrToken`), gated on
+  `asset:read` like every other asset read route. `Asset.qrToken` already
+  existed in the schema and was seeded (`prisma/seed.ts`); this is the first
+  code that reads it.
+- Camera permission denial, an unsupported browser, and an unrecognized QR
+  are all distinct, honest states (no silent failure) — plus a manual
+  "พิมพ์รหัสเสาด้วยตนเอง" fallback (typed asset code → `/assets/:code`
+  directly), which is both the WCAG 2.2 AA no-camera path and what a
+  QR-print-failure in the field would need anyway.
+- Extracted `TechnicianBottomNav` (`src/components/TechnicianBottomNav.tsx`)
+  out of `src/app/today/page.tsx` so both `/today` and the new `/today/scan`
+  render the same nav with a real `current` prop — same honesty convention as
+  `AppRail` (`efba3c3`): no page hardcodes `aria-current` for an item it isn't
+  actually on.
+
+**Test evidence:** `pnpm test` → **237/237** (unchanged — no domain logic
+added; QR→asset resolution is a DB lookup, not a business rule). New
+integration test `src/app/api/assets/by-qr/[token]/route.itest.ts` (401 / 404
+`QR_NOT_RECOGNIZED` / 200 resolving a known token) — `pnpm test:integration` →
+**59 passing / 2 failing** (13 files; same 2 pre-existing `read-routes.itest.ts`
+stale-seed-state failures as every prior entry, confirmed unchanged before and
+after). `typecheck`/`lint`/`build` clean. Browser-verified against
+`http://localhost:3100/today/scan` on the local DB: camera permission denied
+in the automation environment renders the honest "เข้าถึงกล้องไม่ได้" state
+(not a crash); manual entry of `EP03` correctly navigated to the real
+`/assets/EP03` page with live DB data; `GET /api/assets/by-qr/qr_EP01`
+resolved to `{"code":"EP01"}` against the real seeded token. No console
+errors. No new data written to the DB by this verification (read-only route).
+
+**Scope note:** this closes the scan-in half of the spec line ("เปิด
+asset/work order ที่ถูกต้อง") — it opens the asset detail page, which already
+lists that asset's active work orders. It does not add a QR *generator*/print
+flow — the spec has no requirement for one (scan-only), and physically
+printing/affixing QR labels to the 27 poles is a hardware/deployment concern,
+not a code gap.
+
+---
+
 ## 2026-07-25 — Planner console v1: WO transitions, schedule batches, fault repair-accept
 
 **FACT:** The `/work-orders` page was read-only — schedule-batch create/publish,

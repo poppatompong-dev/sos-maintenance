@@ -5,17 +5,17 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-25 (Planner console v1 **implemented** — schedule-batch
-create/approve/publish, work-order transitions, and fault repair-accept now
-have a working UI at `/work-orders`; QA/UAT gate as a whole still NOT
-closed — do not claim production-ready)._
+_Last updated: 2026-07-25 (Planner console v1 **implemented**; QR scan
+**implemented**; photo capture and offline queue in progress this session —
+QA/UAT gate as a whole still NOT closed — do not claim production-ready)._
 
 ## ▶ Next: security boundary + Neon credential rotation (need the account owner)
 The engineering backlog that didn't need the account owner is now done: the
 flexible grouped checklist, the GPS >100m mandatory reason (UAT case 8), the
-dashboard nav/CTA honesty fix, and the Planner console v1 (WO transitions +
-schedule batches + fault repair-accept). What's left on the release-blocker
-list is **not code** — it needs the project owner's direct action:
+dashboard nav/CTA honesty fix, the Planner console v1 (WO transitions +
+schedule batches + fault repair-accept), and QR scan. What's left on the
+release-blocker list is **not code** — it needs the project owner's direct
+action:
 1. **Network boundary for the public Vercel URL** — `AUTH_MODE=internal` gives
    every reachable caller full permissions; the deployed URL must be restricted
    (VPN / IP allowlist / Vercel deployment protection) or the exposure must be
@@ -33,9 +33,10 @@ recorded (see "Next steps" below).
 แล้วส่งต่อ [`HANDOFF_CLAUDE.md`](HANDOFF_CLAUDE.md) ให้ Claude Code
 
 ## Where we are
-- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ · **Dashboard nav/CTA honesty fix** ✅ · **Planner console v1** ✅ — implementation is in the working tree, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
-- **Planner console v1 — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/work-orders` is now tabbed (**ใบงานทั้งหมด / ชุดงาน**) and action-capable: work-order transitions (curated per-role from the real state machine — no dead/fake buttons), schedule-batch create/approve/publish (plan-picker form + status actions), and fault repair-accept (corrective work orders show the linked fault's repair evidence — cause/fix/changed parts/retest — before accept/reject). Two new read endpoints added (`GET /api/work-orders/:code`, `GET /api/maintenance-plans`) since neither existed. Live-verified on the local DB with throwaway fixtures, all cleaned up afterward — guarded demo untouched. **Known gap, not fixed this slice:** `ASSIGNED` only flips status; there's an `Assignment` table but nothing writes to it yet, so there's no real technician picker.
-- **Tests:** `pnpm test` → **237 passing** (26 files). Locally, DB-backed integration → **56 passing / 2 failing (13 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice, unrelated to this work). `pnpm typecheck`, `pnpm lint`, `pnpm build` are green. CI was last confirmed fully green on Actions run [`30086016629`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30086016629) (checklist slice, commit `8727436`) — re-confirm CI on the latest commits before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
+- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ · **Dashboard nav/CTA honesty fix** ✅ · **Planner console v1** ✅ · **QR scan** ✅ — implementation is in the working tree, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
+- **QR scan — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/today/scan` (the Technician nav's 2nd of 3 destinations) decodes a pole's QR locally with `jsqr` and resolves it server-side via `GET /api/assets/by-qr/:token` (`Asset.qrToken`, `asset:read`-gated) before navigating to `/assets/:code`. Manual code-entry fallback covers no-camera devices (WCAG 2.2 AA) and QR-print failures. Only new runtime dependency: `jsqr` (Apache-2.0).
+- **Planner console v1 — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/work-orders` is now tabbed (**ใบงานทั้งหมด / ชุดงาน**) and action-capable: work-order transitions (curated per-role from the real state machine — no dead/fake buttons), schedule-batch create/approve/publish (plan-picker form + status actions), and fault repair-accept (corrective work orders show the linked fault's repair evidence — cause/fix/changed parts/retest — before accept/reject). Two new read endpoints added (`GET /api/work-orders/:code`, `GET /api/maintenance-plans`) since neither existed. Live-verified on the local DB with throwaway fixtures, all cleaned up afterward — guarded demo untouched. **Known gap, not fixed this slice:** `ASSIGNED` only flips status; there's an `Assignment` table but nothing writes to it yet, so there's no real technician picker — see "Blocked, not missing" below for why.
+- **Tests:** `pnpm test` → **237 passing** (26 files, unchanged by QR scan — no new domain logic). Locally, DB-backed integration → **59 passing / 2 failing (14 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice). `pnpm typecheck`, `pnpm lint`, `pnpm build` are green. CI was last confirmed fully green on Actions run [`30140977892`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30140977892) (Planner console v1, commit `2613940`) — re-confirm CI on the QR-scan commit before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
 - **Dashboard nav/CTA honesty fix — DONE (commit `efba3c3`).** `AppRail` and the
   `/today` bottom nav previously rendered every item as a dead `href="#"`, and
   "active" was hardcoded per item rather than derived from the real route (so
@@ -101,11 +102,13 @@ Vercel URL's network boundary and Neon credential rotation, both below.
 2. ~~**Workflow UAT (happy path)**~~ — **DONE** for start → checklist/GPS → submit
    → `SUBMITTED`, verified in-browser on the local DB. ~~Dashboard nav/CTA
    honesty~~ — **DONE (2026-07-24)**, see above. ~~Planner console v1~~ —
-   **DONE (2026-07-25)**, see above. Still remaining in this area: offline
-   queue, QR scan, and photo capture. The initial-survey checklist
-   deliberately stays un-groupified and its CTA disabled until photo capture
-   exists (owner decision, 2026-07-24) — do not "fix" it by stripping its
-   photo requirements without asking first.
+   **DONE (2026-07-25)**, see above. ~~QR scan~~ — **DONE (2026-07-25)**, see
+   above. Still remaining in this area: offline queue and photo capture (in
+   progress this session — check the latest WORKLOG entries above this list
+   for current status). The initial-survey checklist deliberately stays
+   un-groupified and its CTA disabled until photo capture exists (owner
+   decision, 2026-07-24) — do not "fix" it by stripping its photo
+   requirements without asking first.
 3. ~~**Flexible field checklist**~~ — **DONE (2026-07-24).** All 16 tasks of
    [`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`](superpowers/plans/2026-07-23-flexible-field-checklist.md)
    executed test-first in small vertical commits. Monthly field inspection is now
