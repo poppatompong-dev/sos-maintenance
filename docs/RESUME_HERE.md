@@ -5,17 +5,20 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-25 (Planner console v1 **implemented**; QR scan
-**implemented**; photo capture and offline queue in progress this session —
-QA/UAT gate as a whole still NOT closed — do not claim production-ready)._
+_Last updated: 2026-07-25 (Planner console v1, QR scan, photo storage backend,
+and the offline mutation queue all **implemented** this session — QA/UAT gate
+as a whole still NOT closed — do not claim production-ready)._
 
 ## ▶ Next: security boundary + Neon credential rotation (need the account owner)
-The engineering backlog that didn't need the account owner is now done: the
+Every engineering item that didn't need the account owner is now done: the
 flexible grouped checklist, the GPS >100m mandatory reason (UAT case 8), the
 dashboard nav/CTA honesty fix, the Planner console v1 (WO transitions +
-schedule batches + fault repair-accept), and QR scan. What's left on the
-release-blocker list is **not code** — it needs the project owner's direct
-action:
+schedule batches + fault repair-accept), QR scan, the photo/evidence storage
+backend, and the offline mutation queue for field checklist submission. What
+remains is either **not code** (below) or **needs an explicit scope decision
+from the owner first** (see "Blocked, not missing" further down — client
+photo-capture UI and the ASSIGNED technician picker). What's left on the
+release-blocker list needs the project owner's direct action:
 1. **Network boundary for the public Vercel URL** — `AUTH_MODE=internal` gives
    every reachable caller full permissions; the deployed URL must be restricted
    (VPN / IP allowlist / Vercel deployment protection) or the exposure must be
@@ -33,11 +36,34 @@ recorded (see "Next steps" below).
 แล้วส่งต่อ [`HANDOFF_CLAUDE.md`](HANDOFF_CLAUDE.md) ให้ Claude Code
 
 ## Where we are
-- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ · **Dashboard nav/CTA honesty fix** ✅ · **Planner console v1** ✅ · **QR scan** ✅ · **Photo storage backend (ADR 0005)** ✅ (infra only — see below) — implementation is in the working tree, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
-- **Photo/evidence storage backend — DONE (infra only), see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `Attachment` had a schema and an ADR (0005) but zero consumers. Now built: `StoragePort` + local-filesystem V1 driver (`STORAGE_LOCAL_DIR`), MIME/signature/size validation (`src/domain/attachment`, sniffs real bytes — never trusts a declared type), `POST /api/attachments` (multipart upload, `workorder:submit`/`repair:submit`), `GET /api/attachments/:id` (authorized download, `asset:read`). **Deliberately NOT done:** any client-facing capture UI. Wiring the initial-survey checklist's photo requirement is the owner's call to make (same question deferred 2026-07-24 in the nav/CTA honesty entry); wiring repair before/after photos would require first building a technician repair-submission UI that doesn't exist at all (`POST /api/faults/:code/repair` is API-only, no UI anywhere). Both are real next slices, but each needs a scope decision, not just code.
+- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ · **Dashboard nav/CTA honesty fix** ✅ · **Planner console v1** ✅ · **QR scan** ✅ · **Photo storage backend (ADR 0005)** ✅ (infra only — see below) · **Offline mutation queue (field checklist submission)** ✅ — implementation is in the working tree, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
+- **Offline mutation queue — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/today` no longer requires `online` to attempt a checklist submit — a genuine network failure (not an HTTP rejection) now enqueues to a real IndexedDB store (`src/lib/offline-queue.ts`) instead of just erroring out, auto-drains on reconnect, and a `QueueStatusBanner` shows pending/failed counts with a manual retry for failures (which are never silently auto-retried). Scoped deliberately to the field-evidence submit path only — not `WorkOrderCard`'s "เริ่มงาน" start action, which stays online-only by choice. Live end-to-end proof against the local DB (no automated IndexedDB test coverage — this repo has no browser/jsdom test setup for any component, matching the existing "verify UI live" convention): patched `fetch` to fail the way a real network outage does, confirmed the entry lands in IndexedDB, restored connectivity, confirmed the queue drained and the server independently shows `SUBMITTED` with the correct persisted checklist response and idempotency key.
+- **Photo/evidence storage backend — DONE (infra only), see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `Attachment` had a schema and an ADR (0005) but zero consumers. Now built: `StoragePort` + local-filesystem V1 driver (`STORAGE_LOCAL_DIR`), MIME/signature/size validation (`src/domain/attachment`, sniffs real bytes — never trusts a declared type), `POST /api/attachments` (multipart upload, `workorder:submit`/`repair:submit`), `GET /api/attachments/:id` (authorized download, `asset:read`). **Deliberately NOT done:** any client-facing capture UI — see "Blocked, not missing" below.
 - **QR scan — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/today/scan` (the Technician nav's 2nd of 3 destinations) decodes a pole's QR locally with `jsqr` and resolves it server-side via `GET /api/assets/by-qr/:token` (`Asset.qrToken`, `asset:read`-gated) before navigating to `/assets/:code`. Manual code-entry fallback covers no-camera devices (WCAG 2.2 AA) and QR-print failures. Only new runtime dependency: `jsqr` (Apache-2.0).
 - **Planner console v1 — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/work-orders` is now tabbed (**ใบงานทั้งหมด / ชุดงาน**) and action-capable: work-order transitions (curated per-role from the real state machine — no dead/fake buttons), schedule-batch create/approve/publish (plan-picker form + status actions), and fault repair-accept (corrective work orders show the linked fault's repair evidence — cause/fix/changed parts/retest — before accept/reject). Two new read endpoints added (`GET /api/work-orders/:code`, `GET /api/maintenance-plans`) since neither existed. Live-verified on the local DB with throwaway fixtures, all cleaned up afterward — guarded demo untouched. **Known gap, not fixed this slice:** `ASSIGNED` only flips status; there's an `Assignment` table but nothing writes to it yet, so there's no real technician picker — see "Blocked, not missing" below for why.
-- **Tests:** `pnpm test` → **245 passing** (27 files). Locally, DB-backed integration → **68 passing / 2 failing (15 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice). `pnpm typecheck`, `pnpm lint`, `pnpm build` are green. CI was last confirmed fully green on Actions run [`30140977892`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30140977892) (Planner console v1, commit `2613940`) — re-confirm CI on the QR-scan and photo-storage commits before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
+- **Tests:** `pnpm test` → **252 passing** (28 files). Locally, DB-backed integration → **68 passing / 2 failing (15 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice). `pnpm typecheck`, `pnpm lint`, `pnpm build` are green. CI was last confirmed fully green on Actions run [`30140977892`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30140977892) (Planner console v1, commit `2613940`) — re-confirm CI on the QR-scan, photo-storage, and offline-queue commits before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
+
+## Blocked, not missing — needs the owner's decision, not more code
+Two remaining gaps look like code TODOs but are actually product-scope
+decisions that should not be resolved unilaterally:
+- **Client photo-capture UI.** The storage backend is done (above), but
+  wiring it into an actual flow means either (a) enabling photo capture on
+  the initial-survey checklist — the exact question the owner already
+  declined to resolve by fiat on 2026-07-24 (see the nav/CTA honesty entry),
+  or (b) building a technician repair-submission UI from scratch, since
+  `POST /api/faults/:code/repair` has no UI anywhere today. Ask which,
+  and how much of the flow, before building either.
+- **Real technician picker for the `ASSIGNED` work-order transition.**
+  Genuinely blocked, not just unbuilt: `AUTH_MODE=internal` (owner-approved)
+  means every request is the single `internal-operator` DB actor — there is
+  **no roster of real named technicians anywhere** (`prisma/seed.ts` seeds
+  exactly one generic user). `docs/spec/07_DECISIONS_RISKS_OPEN_ITEMS.md`
+  explicitly lists "initial Admin/Planner/Technician/UAT names" as an open
+  input owed by the product owner and instructs "never invent personal
+  data." Building a name-picker now would mean fabricating people, which
+  `AGENTS.md` forbids outright. This unblocks only when either the owner
+  supplies real technician names to seed, or `AUTH_MODE=keycloak` (deferred)
+  is switched on for real per-person login.
 - **Dashboard nav/CTA honesty fix — DONE (commit `efba3c3`).** `AppRail` and the
   `/today` bottom nav previously rendered every item as a dead `href="#"`, and
   "active" was hardcoded per item rather than derived from the real route (so
@@ -104,12 +130,14 @@ Vercel URL's network boundary and Neon credential rotation, both below.
    → `SUBMITTED`, verified in-browser on the local DB. ~~Dashboard nav/CTA
    honesty~~ — **DONE (2026-07-24)**, see above. ~~Planner console v1~~ —
    **DONE (2026-07-25)**, see above. ~~QR scan~~ — **DONE (2026-07-25)**, see
-   above. Still remaining in this area: offline queue and photo capture (in
-   progress this session — check the latest WORKLOG entries above this list
-   for current status). The initial-survey checklist deliberately stays
-   un-groupified and its CTA disabled until photo capture exists (owner
-   decision, 2026-07-24) — do not "fix" it by stripping its photo
-   requirements without asking first.
+   above. ~~Photo storage backend~~ — **DONE (infra only, 2026-07-25)**, see
+   above. ~~Offline mutation queue~~ — **DONE (2026-07-25)**, see above. Still
+   remaining in this area: client photo-capture UI and the `ASSIGNED`
+   technician picker — both **blocked on an owner decision**, not a code gap;
+   see "Blocked, not missing" above. The initial-survey checklist
+   deliberately stays un-groupified and its CTA disabled until that decision
+   is made — do not "fix" it by stripping its photo requirements without
+   asking first.
 3. ~~**Flexible field checklist**~~ — **DONE (2026-07-24).** All 16 tasks of
    [`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`](superpowers/plans/2026-07-23-flexible-field-checklist.md)
    executed test-first in small vertical commits. Monthly field inspection is now
@@ -132,10 +160,10 @@ Vercel URL's network boundary and Neon credential rotation, both below.
 7. **Release gate:** redeploy, run runtime smoke tests, then complete
    `docs/spec/06_DELIVERY_QA_UAT.md` with the internal-mode exception recorded.
 8. **Later product depth:** reports, online MapLibre map (accessible list fallback
-   already built), optional Keycloak mode if policy changes, and a real
-   technician picker for the `ASSIGNED` work-order transition (the `Assignment`
-   table exists in the schema but nothing writes to it yet — see the Planner
-   console v1 entry in `docs/WORKLOG.md`, 2026-07-25).
+   already built), optional Keycloak mode if policy changes (this also
+   unblocks the technician picker — see "Blocked, not missing" above), and
+   client photo-capture UI once the owner decides which flow gets it first
+   (see the same section).
 
 **Docker safety (local only):** the dev compose declares **two** named volumes,
 `db-data` **and** `keycloak-data`. **Never run `docker compose down -v`** — it

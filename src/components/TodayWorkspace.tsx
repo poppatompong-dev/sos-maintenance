@@ -19,6 +19,8 @@ import {
   type MemberState,
 } from '@/presentation/thai-labels';
 import { evaluateGpsCapture } from '@/domain/geo';
+import { enqueueSubmission, listQueue, offlineQueueSupported, type QueuedSubmission } from '@/lib/offline-queue';
+import { drainOfflineQueue } from '@/lib/drain-queue';
 
 interface SyncFieldGroupMember {
   memberKey: string;
@@ -187,6 +189,7 @@ function InspectionForm({
   const [error, setError] = useState<string | null>(null);
   const [gpsPosition, setGpsPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsReason, setGpsReason] = useState('');
+  const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
 
   const remaining = useMemo(
     () => workOrder.groups.filter((g) => !groupComplete(g, answers[g.key] ?? emptyAnswer())).length,
@@ -214,9 +217,13 @@ function InspectionForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!online || remaining > 0 || working || needsGpsReason) return;
+    // No `online` gate here on purpose: a genuine network failure below is
+    // queued to IndexedDB rather than blocking the technician from even
+    // trying — see the try/catch around the two POSTs.
+    if (remaining > 0 || working || needsGpsReason) return;
     setWorking(true);
     setError(null);
+    setQueuedNotice(null);
 
     try {
       const position = gpsPosition ?? (await getCurrentPosition());
@@ -266,17 +273,32 @@ function InspectionForm({
         payload,
       };
 
-      await requestJson('/api/inspections', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(envelope),
-      });
-      await requestJson(`/api/work-orders/${encodeURIComponent(workOrder.code)}/transition`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ to: 'SUBMITTED' }),
-      });
-      await onChanged();
+      try {
+        await requestJson('/api/inspections', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(envelope),
+        });
+        await requestJson(`/api/work-orders/${encodeURIComponent(workOrder.code)}/transition`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ to: 'SUBMITTED' }),
+        });
+        await onChanged();
+      } catch (cause) {
+        // fetch() itself only ever throws TypeError on a real network failure
+        // (offline, DNS, connection refused) — never on an HTTP error status,
+        // which readJson turns into a plain Error instead. Only the former is
+        // safe to queue and silently retry; the latter (validation, conflict)
+        // must stay visible so the technician can fix the input.
+        if (cause instanceof TypeError && offlineQueueSupported()) {
+          await enqueueSubmission({ id: currentMutationId, workOrderCode: workOrder.code, envelope });
+          setQueuedNotice('ออฟไลน์ — บันทึกผลตรวจไว้ในเครื่องแล้ว จะส่งอัตโนมัติเมื่อกลับมาออนไลน์');
+          await onChanged();
+        } else {
+          throw cause;
+        }
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'ส่งผลตรวจไม่สำเร็จ');
     } finally {
@@ -418,10 +440,11 @@ function InspectionForm({
       </div>
 
       {error ? <p role="alert" className="mt-3 rounded-xl bg-down-tint px-3 py-3 text-xs text-down-ink">{error}</p> : null}
-      {!online ? <p className="mt-3 text-xs text-watch-ink">ออฟไลน์ — เชื่อมต่ออินเทอร์เน็ตก่อนส่งผลตรวจ</p> : null}
+      {queuedNotice ? <p role="status" className="mt-3 rounded-xl bg-watch-tint px-3 py-3 text-xs text-watch-ink">{queuedNotice}</p> : null}
+      {!online ? <p className="mt-3 text-xs text-watch-ink">ออฟไลน์ — ระบบจะบันทึกผลตรวจไว้ในเครื่องและส่งอัตโนมัติเมื่อกลับมาออนไลน์</p> : null}
       <button
         type="submit"
-        disabled={!online || remaining > 0 || working || needsGpsReason}
+        disabled={remaining > 0 || working || needsGpsReason}
         className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         <CheckCircleIcon size={18} />
@@ -431,7 +454,9 @@ function InspectionForm({
             ? `ตอบให้ครบอีก ${remaining} กลุ่ม`
             : needsGpsReason
               ? 'กรุณาระบุเหตุผลตำแหน่งก่อนส่ง'
-              : 'ส่งผลตรวจ'}
+              : online
+                ? 'ส่งผลตรวจ'
+                : 'บันทึกผลตรวจไว้ในเครื่อง'}
       </button>
     </form>
   );
@@ -515,11 +540,43 @@ function WorkOrderCard({
   );
 }
 
+function QueueStatusBanner({ queue, onRetry, retrying }: { queue: QueuedSubmission[]; onRetry: () => void; retrying: boolean }) {
+  if (queue.length === 0) return null;
+  const pending = queue.filter((q) => q.status === 'PENDING' || q.status === 'SYNCING').length;
+  const failed = queue.filter((q) => q.status === 'FAILED');
+
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-watch-tint bg-watch-tint/40 px-4 py-3 text-xs text-watch-ink">
+      {pending > 0 ? <p>{pending} รายการยังไม่ซิงก์ — จะส่งอัตโนมัติเมื่อกลับมาออนไลน์</p> : null}
+      {failed.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-down-ink">{failed.length} รายการซิงก์ไม่สำเร็จ: {failed[0].lastError ?? 'เกิดข้อผิดพลาด'}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={retrying}
+            className="min-h-9 shrink-0 rounded-lg border border-border-strong bg-surface px-3 text-xs font-semibold text-brand disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {retrying ? 'กำลังลองใหม่…' : 'ลองส่งใหม่'}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function TodayWorkspace() {
   const [bootstrap, setBootstrap] = useState<SyncBootstrap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
+  const [queue, setQueue] = useState<QueuedSubmission[]>([]);
+  const [retryingQueue, setRetryingQueue] = useState(false);
+
+  const refreshQueue = useCallback(async () => {
+    if (!offlineQueueSupported()) return;
+    setQueue(await listQueue());
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -531,20 +588,38 @@ export function TodayWorkspace() {
     } finally {
       setLoading(false);
     }
-  }, []);
+    await refreshQueue();
+  }, [refreshQueue]);
 
   useEffect(() => {
-    const update = () => setOnline(navigator.onLine);
-    update();
-    window.addEventListener('online', update);
-    window.addEventListener('offline', update);
+    const goOnline = () => {
+      setOnline(true);
+      // Reconnect: drain anything queued while offline, then reload the real state.
+      void drainOfflineQueue(['PENDING']).then(refresh);
+    };
+    const goOffline = () => setOnline(false);
+    const syncInitialOnline = () => setOnline(navigator.onLine);
+    syncInitialOnline();
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
     const refreshTimer = window.setTimeout(() => void refresh(), 0);
     return () => {
       window.clearTimeout(refreshTimer);
-      window.removeEventListener('online', update);
-      window.removeEventListener('offline', update);
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
     };
   }, [refresh]);
+
+  async function retryFailedQueue() {
+    if (retryingQueue) return;
+    setRetryingQueue(true);
+    try {
+      await drainOfflineQueue(['FAILED']);
+      await refresh();
+    } finally {
+      setRetryingQueue(false);
+    }
+  }
 
   return (
     <section id="today-workspace" className="mt-6" aria-labelledby="today-workspace-title">
@@ -567,6 +642,7 @@ export function TodayWorkspace() {
       </div>
 
       <div className="mt-3 space-y-3">
+        <QueueStatusBanner queue={queue} onRetry={() => void retryFailedQueue()} retrying={retryingQueue} />
         {loading && !bootstrap ? <p role="status" className="rounded-2xl border border-border bg-surface px-5 py-10 text-center text-sm text-muted">กำลังโหลดใบงาน…</p> : null}
         {error ? (
           <div className="rounded-2xl border border-border bg-surface px-5 py-10 text-center">

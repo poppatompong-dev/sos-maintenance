@@ -5,6 +5,80 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-25 — Offline mutation queue for field checklist submission
+
+**FACT:** `src/domain/sync/envelope.ts` (idempotency/conflict primitives) and
+`POST /api/inspections` already existed, but only the synchronous online path
+was wired — `InspectionForm` (`TodayWorkspace.tsx`) required `online` just to
+attempt a submit, and a network failure just showed an error with no
+recovery, contradicting doc 08's explicit requirement ("IndexedDB holds the
+durable client queue; server is the system of record", ADR 0004) and
+`SyncState.tsx`'s own comment that this was deferred to "a later sprint."
+This slice builds it, scoped to exactly the field-evidence submission path —
+the highest-stakes place to lose data — not every action in the app.
+
+**Built:**
+- `src/domain/sync/queue.ts` — pure policy: given a queued entry's attempt
+  count and what happened (`success` / `already-applied` / `network-error` /
+  `rejected`), decide the next state. `network-error` → stays `PENDING` (retry
+  later, never a failure). `rejected` (the server said no — validation,
+  conflict) → `FAILED` and **stops auto-retrying**, staying visible until a
+  person looks at it — never silently dropped, never silently retried
+  forever. 7 unit tests (`queue.test.ts`).
+- `src/lib/offline-queue.ts` — the actual durable client queue: a small
+  native `indexedDB` wrapper (no new dependency — `enqueueSubmission` /
+  `listQueue` / `updateQueueEntry` / `removeQueueEntry`), one entry per full
+  submission attempt (the mutation envelope + the work-order code for the
+  follow-up transition).
+- `src/lib/drain-queue.ts` — replays a queued entry: POST `/api/inspections`,
+  then POST the `SUBMITTED` transition, using `nextQueueState` to interpret
+  the outcome. A `409 TRANSITION_NOT_ALLOWED` on the transition after the
+  inspection already landed (a drain that partially succeeded on an earlier
+  attempt) is treated as `already-applied`, not a failure — prevents a
+  false "sync failed" on data that's actually already saved.
+- `TodayWorkspace.tsx`: removed the `online` gate that blocked even
+  attempting a submit. The existing two-call submit path (`/api/inspections`
+  then the transition) is now wrapped so that **only** a genuine network
+  failure (`fetch` throwing `TypeError` — the one thing it throws on real
+  connectivity loss, never on an HTTP error status) falls through to
+  `enqueueSubmission`; an actual server rejection (validation,
+  `GPS_REASON_REQUIRED`, etc.) still surfaces exactly as before, unchanged,
+  since silently queuing an input the server will reject again helps no one.
+  A new `QueueStatusBanner` shows pending/failed counts with a manual "retry"
+  action for `FAILED` entries (never auto-retried). Drain is triggered on
+  mount and on the browser `online` event.
+- **Deliberately out of scope this slice:** `WorkOrderCard`'s "เริ่มงาน"
+  (start) transition stays online-only — the safety-critical thing to never
+  lose is the technician's completed field evidence, not a status flip that
+  can simply be retried by opening the app again. Not queuing it is a scope
+  choice, not an oversight.
+
+**Test evidence:** `pnpm test` → **252/252** (7 new pure policy tests).
+`pnpm test:integration` → **68/70** (same 2 pre-existing unrelated failures).
+`typecheck`/`lint`/`build` clean. IndexedDB has no meaningful coverage in the
+Node-based Vitest environment used elsewhere in this repo (no jsdom/browser
+test setup exists for any component here — UI is verified live per
+`AGENTS.md`), so this was proven **live end-to-end** against the local DB
+with a throwaway work order (`WO-OFFLINEQ-offlineq1`, cleaned up after —
+guarded demo fixture untouched):
+1. Patched `window.fetch` to reject `/api/inspections` with a real `TypeError`
+   (mocked geolocation to isolate the network path) and submitted — the form
+   showed "ออฟไลน์ — บันทึกผลตรวจไว้ในเครื่องแล้ว…" (not an error), and the
+   `QueueStatusBanner` correctly showed "1 รายการยังไม่ซิงก์".
+2. Read the real IndexedDB store directly: one `PENDING` entry, correct
+   `workOrderCode`, `attempts: 0`.
+3. Restored `fetch`, dispatched a real `online` event (no page reload) — the
+   queue auto-drained: IndexedDB confirmed empty afterward, the banner
+   disappeared, and the work order dropped out of the open-orders list (matching
+   existing `SUBMITTED`-exclusion behavior).
+4. Confirmed server-side via direct DB query: `WorkOrder.status = SUBMITTED`
+   (version 1), one `ChecklistResponse` with `result: PASS` and
+   `clientMutationId` matching the queued entry's id exactly (idempotency key
+   threaded through correctly end to end), one `WorkLog` row
+   `IN_PROGRESS → SUBMITTED`.
+
+---
+
 ## 2026-07-25 — Photo/evidence storage backend (ADR 0005) — infra only, no capture UI yet
 
 **FACT:** `Attachment` (schema), the storage-driver decision (ADR 0005), and
