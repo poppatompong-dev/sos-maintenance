@@ -43,27 +43,6 @@ recorded (see "Next steps" below).
 - **Planner console v1 — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/work-orders` is now tabbed (**ใบงานทั้งหมด / ชุดงาน**) and action-capable: work-order transitions (curated per-role from the real state machine — no dead/fake buttons), schedule-batch create/approve/publish (plan-picker form + status actions), and fault repair-accept (corrective work orders show the linked fault's repair evidence — cause/fix/changed parts/retest — before accept/reject). Two new read endpoints added (`GET /api/work-orders/:code`, `GET /api/maintenance-plans`) since neither existed. Live-verified on the local DB with throwaway fixtures, all cleaned up afterward — guarded demo untouched. **Known gap, not fixed this slice:** `ASSIGNED` only flips status; there's an `Assignment` table but nothing writes to it yet, so there's no real technician picker — see "Blocked, not missing" below for why.
 - **Tests:** `pnpm test` → **252 passing** (28 files). Locally, DB-backed integration → **68 passing / 2 failing (15 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice). `pnpm typecheck`, `pnpm lint`, `pnpm build` are green. CI was last confirmed fully green on Actions run [`30140977892`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30140977892) (Planner console v1, commit `2613940`) — re-confirm CI on the QR-scan, photo-storage, and offline-queue commits before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
 
-## Blocked, not missing — needs the owner's decision, not more code
-Two remaining gaps look like code TODOs but are actually product-scope
-decisions that should not be resolved unilaterally:
-- **Client photo-capture UI.** The storage backend is done (above), but
-  wiring it into an actual flow means either (a) enabling photo capture on
-  the initial-survey checklist — the exact question the owner already
-  declined to resolve by fiat on 2026-07-24 (see the nav/CTA honesty entry),
-  or (b) building a technician repair-submission UI from scratch, since
-  `POST /api/faults/:code/repair` has no UI anywhere today. Ask which,
-  and how much of the flow, before building either.
-- **Real technician picker for the `ASSIGNED` work-order transition.**
-  Genuinely blocked, not just unbuilt: `AUTH_MODE=internal` (owner-approved)
-  means every request is the single `internal-operator` DB actor — there is
-  **no roster of real named technicians anywhere** (`prisma/seed.ts` seeds
-  exactly one generic user). `docs/spec/07_DECISIONS_RISKS_OPEN_ITEMS.md`
-  explicitly lists "initial Admin/Planner/Technician/UAT names" as an open
-  input owed by the product owner and instructs "never invent personal
-  data." Building a name-picker now would mean fabricating people, which
-  `AGENTS.md` forbids outright. This unblocks only when either the owner
-  supplies real technician names to seed, or `AUTH_MODE=keycloak` (deferred)
-  is switched on for real per-person login.
 - **Dashboard nav/CTA honesty fix — DONE (commit `efba3c3`).** `AppRail` and the
   `/today` bottom nav previously rendered every item as a dead `href="#"`, and
   "active" was hardcoded per item rather than derived from the real route (so
@@ -90,6 +69,28 @@ decisions that should not be resolved unilaterally:
 - **What works end-to-end today:** the whole domain (readiness, recurrence, geo,
   work state machine, fault, metrics, RBAC, sync, import, notifications) + two UI
   shells rendering the *true* initial state (27 poles UNKNOWN until surveyed).
+
+## Blocked, not missing — needs the owner's decision, not more code
+Two remaining gaps look like code TODOs but are actually product-scope
+decisions that should not be resolved unilaterally:
+- **Client photo-capture UI.** The storage backend is done (above), but
+  wiring it into an actual flow means either (a) enabling photo capture on
+  the initial-survey checklist — the exact question the owner already
+  declined to resolve by fiat on 2026-07-24 (see the nav/CTA honesty entry
+  above), or (b) building a technician repair-submission UI from scratch,
+  since `POST /api/faults/:code/repair` has no UI anywhere today. Ask which,
+  and how much of the flow, before building either.
+- **Real technician picker for the `ASSIGNED` work-order transition.**
+  Genuinely blocked, not just unbuilt: `AUTH_MODE=internal` (owner-approved)
+  means every request is the single `internal-operator` DB actor — there is
+  **no roster of real named technicians anywhere** (`prisma/seed.ts` seeds
+  exactly one generic user). `docs/spec/07_DECISIONS_RISKS_OPEN_ITEMS.md`
+  explicitly lists "initial Admin/Planner/Technician/UAT names" as an open
+  input owed by the product owner and instructs "never invent personal
+  data." Building a name-picker now would mean fabricating people, which
+  `AGENTS.md` forbids outright. This unblocks only when either the owner
+  supplies real technician names to seed, or `AUTH_MODE=keycloak` (deferred)
+  is switched on for real per-person login.
 
 ## Get running
 **On this machine** — the current workspace is `D:\sos-maintenance`:
