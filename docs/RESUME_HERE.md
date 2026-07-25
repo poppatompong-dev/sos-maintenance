@@ -5,16 +5,17 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-24 (flexible field checklist **implemented** AND GPS
->100m mandatory reason **implemented, closing UAT case 8**, AND dashboard
-nav/CTA **honesty fix implemented**; QA/UAT gate as a whole still NOT
+_Last updated: 2026-07-25 (Planner console v1 **implemented** — schedule-batch
+create/approve/publish, work-order transitions, and fault repair-accept now
+have a working UI at `/work-orders`; QA/UAT gate as a whole still NOT
 closed — do not claim production-ready)._
 
 ## ▶ Next: security boundary + Neon credential rotation (need the account owner)
-Both open engineering slices from the prior handoff are now done: the flexible
-grouped checklist and the GPS >100m mandatory reason (UAT case 8). What's left
-on the release-blocker list is **not code** — it needs the project owner's
-direct action:
+The engineering backlog that didn't need the account owner is now done: the
+flexible grouped checklist, the GPS >100m mandatory reason (UAT case 8), the
+dashboard nav/CTA honesty fix, and the Planner console v1 (WO transitions +
+schedule batches + fault repair-accept). What's left on the release-blocker
+list is **not code** — it needs the project owner's direct action:
 1. **Network boundary for the public Vercel URL** — `AUTH_MODE=internal` gives
    every reachable caller full permissions; the deployed URL must be restricted
    (VPN / IP allowlist / Vercel deployment protection) or the exposure must be
@@ -32,8 +33,9 @@ recorded (see "Next steps" below).
 แล้วส่งต่อ [`HANDOFF_CLAUDE.md`](HANDOFF_CLAUDE.md) ให้ Claude Code
 
 ## Where we are
-- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ — implementation is in the working tree and pushed, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
-- **Tests:** `pnpm test` → **231 passing** (26 files). Locally, DB-backed integration → **50 passing / 2 failing (11 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice, unrelated to GPS wiring). `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green. CI was last confirmed fully green on Actions run [`30086016629`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30086016629) (checklist slice, commit `8727436`) — re-confirm CI on the GPS-wiring commits before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
+- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ · **Dashboard nav/CTA honesty fix** ✅ · **Planner console v1** ✅ — implementation is in the working tree, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
+- **Planner console v1 — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/work-orders` is now tabbed (**ใบงานทั้งหมด / ชุดงาน**) and action-capable: work-order transitions (curated per-role from the real state machine — no dead/fake buttons), schedule-batch create/approve/publish (plan-picker form + status actions), and fault repair-accept (corrective work orders show the linked fault's repair evidence — cause/fix/changed parts/retest — before accept/reject). Two new read endpoints added (`GET /api/work-orders/:code`, `GET /api/maintenance-plans`) since neither existed. Live-verified on the local DB with throwaway fixtures, all cleaned up afterward — guarded demo untouched. **Known gap, not fixed this slice:** `ASSIGNED` only flips status; there's an `Assignment` table but nothing writes to it yet, so there's no real technician picker.
+- **Tests:** `pnpm test` → **237 passing** (26 files). Locally, DB-backed integration → **56 passing / 2 failing (13 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice, unrelated to this work). `pnpm typecheck`, `pnpm lint`, `pnpm build` are green. CI was last confirmed fully green on Actions run [`30086016629`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30086016629) (checklist slice, commit `8727436`) — re-confirm CI on the latest commits before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
 - **Dashboard nav/CTA honesty fix — DONE (commit `efba3c3`).** `AppRail` and the
   `/today` bottom nav previously rendered every item as a dead `href="#"`, and
   "active" was hardcoded per item rather than derived from the real route (so
@@ -98,9 +100,8 @@ Vercel URL's network boundary and Neon credential rotation, both below.
    See `docs/DEMO_RUNBOOK.md`.
 2. ~~**Workflow UAT (happy path)**~~ — **DONE** for start → checklist/GPS → submit
    → `SUBMITTED`, verified in-browser on the local DB. ~~Dashboard nav/CTA
-   honesty~~ — **DONE (2026-07-24)**, see above. Still remaining in this area:
-   a real Planner console (schedule-batch create/publish, WO transitions,
-   fault repair-accept — none of it has a UI today, only APIs), offline
+   honesty~~ — **DONE (2026-07-24)**, see above. ~~Planner console v1~~ —
+   **DONE (2026-07-25)**, see above. Still remaining in this area: offline
    queue, QR scan, and photo capture. The initial-survey checklist
    deliberately stays un-groupified and its CTA disabled until photo capture
    exists (owner decision, 2026-07-24) — do not "fix" it by stripping its
@@ -127,7 +128,10 @@ Vercel URL's network boundary and Neon credential rotation, both below.
 7. **Release gate:** redeploy, run runtime smoke tests, then complete
    `docs/spec/06_DELIVERY_QA_UAT.md` with the internal-mode exception recorded.
 8. **Later product depth:** reports, online MapLibre map (accessible list fallback
-   already built), and optional Keycloak mode if policy changes.
+   already built), optional Keycloak mode if policy changes, and a real
+   technician picker for the `ASSIGNED` work-order transition (the `Assignment`
+   table exists in the schema but nothing writes to it yet — see the Planner
+   console v1 entry in `docs/WORKLOG.md`, 2026-07-25).
 
 **Docker safety (local only):** the dev compose declares **two** named volumes,
 `db-data` **and** `keycloak-data`. **Never run `docker compose down -v`** — it

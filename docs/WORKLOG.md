@@ -5,6 +5,89 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-25 — Planner console v1: WO transitions, schedule batches, fault repair-accept
+
+**FACT:** The `/work-orders` page was read-only — schedule-batch create/publish,
+work-order transitions, and fault repair-accept all had working APIs and domain
+logic (from earlier sprints) but no UI anywhere, per the prior handoff's
+"Later product depth" gap. This slice wires all three into `/work-orders`,
+which becomes a tabbed **ใบงานทั้งหมด / ชุดงาน** ("all work orders" /
+"schedule batches") page. No nav change: the ≤5-item AppRail cap stays intact
+by extending the existing "ใบงาน" destination rather than adding a 6th item.
+The disabled "ปฏิทิน" nav slot is left untouched on purpose — the real spec
+scope for that slot is a week/month/agenda calendar grid (doc 02 §Planner
+calendar C), which this slice does not build; relabeling a list view as
+"ปฏิทิน" would repeat the exact honesty mistake the prior session (efba3c3)
+fixed.
+
+**New read endpoints (needed before any UI could work):**
+- `GET /api/work-orders/:code` (`src/server/queries/work-order-detail.ts`) —
+  single work-order detail; when the work order is `CORRECTIVE`, includes the
+  linked fault and its latest `RepairAction` evidence (cause, fix, changed
+  parts, retest result) so a Planner can review before accepting/rejecting.
+- `GET /api/maintenance-plans` (`src/server/queries/maintenance-plans.ts`) —
+  active-plan catalog; feeds the schedule-batch creation form's plan picker
+  (batch creation requires a `planId` and no such listing existed).
+Both gated on `asset:read`, matching the existing list endpoints. Integration
+tests added (`route.itest.ts` for each) covering 401/404 and the corrective
+fault+repair-evidence shape.
+
+**UI, curated from the real state machine, not guessed:**
+- `WorkOrderActions.tsx` exports `PLANNER_NEXT` — a Planner-only subset of
+  `canTransition` (`src/domain/work/state-machine.ts`), derived edge-by-edge
+  from the domain rules (e.g. `SUBMITTED` → `CLOSED`/`REJECTED` only;
+  `ASSIGNED`/`IN_PROGRESS`/`REOPENED` → `CANCELLED` only, since the forward
+  edges from those states are technician-only and would be a dishonest button
+  to show a Planner). The server remains the sole authority — every click
+  still goes through the same `/transition` endpoint and `canTransition`.
+- `WorkOrderActionPanel` — inline-expanding table row (not a floating
+  dropdown: an earlier attempt used `position: absolute`, which the table's
+  `overflow-hidden` container clipped off-screen; switched to an expanding
+  `<tr>` instead, which also reads better for touch/mobile). Shows repair
+  evidence inline for `CORRECTIVE` + `SUBMITTED` work orders before the
+  accept/reject buttons.
+- `ScheduleBatchPanel.tsx` — batch list with status-curated approve/publish
+  buttons (`DRAFT→APPROVED→PUBLISHED`, matching `domain/schedule`), plus a
+  create-batch form (plan picker + name + optional scheduled/due dates).
+- `PlannerWorkspace.tsx` — the tab switcher; `WorkOrderTable.tsx` — the
+  work-order table, now action-capable (previously inlined in `page.tsx`).
+- `thai-labels.ts` gained `scheduleBatchStatusLabel`, `faultStatusLabel`,
+  `faultSeverityLabel` (tests added), following the existing
+  presentation-boundary convention.
+
+**Test evidence:** `pnpm test` → **237/237** (231 baseline + 6 new label
+tests). `pnpm test:integration` → **56/58** (13 files; the 2 failures are the
+pre-existing, already-documented stale-local-seed-state issue in
+`read-routes.itest.ts`, unrelated to this change — confirmed unchanged before
+and after). `typecheck`/`lint`/`build` clean. Live-verified against
+`http://localhost:3100/work-orders` on the local DB:
+- Work-order actions: opened the action row for the guarded demo's `SUBMITTED`
+  work order (correctly showed only ตรวจรับ/ตีกลับ, no technician-only
+  buttons) and its `IN_PROGRESS` work order (correctly showed only ยกเลิก) —
+  **panels opened/closed only, no transition actually invoked, so the guarded
+  demo fixture's state is untouched.**
+- Schedule batch: created a real throwaway batch from the seeded semiannual
+  plan (27 work orders, one per active pole — matches `createScheduleBatch`),
+  approved it (self-approval allowed under `AUTH_MODE=internal`, matching
+  `transitionScheduleBatch`'s documented internal-mode exception), confirmed
+  the publish button appeared.
+- Fault repair-accept: created a throwaway `CORRECTIVE`/`SUBMITTED` work order
+  + fault + `RepairAction` via a scratch script, confirmed the evidence panel
+  renders cause/fix/changed-parts/retest correctly.
+- **All throwaway data (batch, its 27 work orders, the corrective WO/fault/
+  repair, the scratch scripts) was deleted after verification** — confirmed
+  by DB count back to exactly the 2 guarded demo work orders / 0 batches /
+  0 faults. No console errors on reload.
+
+**Known gap surfaced, not fixed this slice:** the `ASSIGNED` transition only
+flips status — there's an `Assignment` table (`workOrderId`, `userId`) in the
+schema but nothing writes to it, so a Planner can move a work order to
+`ASSIGNED` without actually picking a technician. Out of scope here (wiring a
+real technician picker is its own vertical slice); flagging so it isn't
+mistaken for done.
+
+---
+
 ## 2026-07-24 — Dashboard nav/CTA honesty fix (no dead links, no fake active state)
 
 **FACT:** `AppRail` (used on `/`, `/work-orders`, `/assets/[code]`) and the

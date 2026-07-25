@@ -59,3 +59,34 @@ export function workOrderKindLabel(code: string): string {
 export function workOrderStatusLabel(code: string): string {
   return WORK_ORDER_STATUS_TH[code] ?? GENERIC_STATE_TH;
 }
+
+const SCHEDULE_BATCH_STATUS_TH: Record<string, string> = {
+  DRAFT: 'ร่าง',
+  APPROVED: 'อนุมัติแล้ว',
+  PUBLISHED: 'เผยแพร่แล้ว',
+};
+
+export function scheduleBatchStatusLabel(code: string): string {
+  return SCHEDULE_BATCH_STATUS_TH[code] ?? GENERIC_STATE_TH;
+}
+
+const FAULT_STATUS_TH: Record<string, string> = {
+  OPEN: 'เปิดอยู่',
+  IN_REPAIR: 'กำลังซ่อม',
+  RETEST: 'รอผล retest',
+  RESOLVED: 'แก้ไขแล้ว',
+  REOPENED: 'เปิดใหม่',
+};
+
+export function faultStatusLabel(code: string): string {
+  return FAULT_STATUS_TH[code] ?? GENERIC_STATE_TH;
+}
+
+const FAULT_SEVERITY_TH: Record<string, string> = {
+  CRITICAL: 'วิกฤต',
+  NON_CRITICAL: 'ทั่วไป',
+};
+
+export function faultSeverityLabel(code: string): string {
+  return FAULT_SEVERITY_TH[code] ?? GENERIC_STATE_TH;
+}

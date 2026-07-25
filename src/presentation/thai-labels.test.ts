@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  faultSeverityLabel,
+  faultStatusLabel,
   groupOutcomeLabel,
   memberStateLabel,
+  scheduleBatchStatusLabel,
   workOrderKindLabel,
   workOrderStatusLabel,
 } from './thai-labels';
@@ -57,5 +60,39 @@ describe('workOrderStatusLabel', () => {
   });
   it('falls back safely on an unknown status', () => {
     expect(workOrderStatusLabel('XYZ')).toBe('สถานะอื่น');
+  });
+});
+
+describe('scheduleBatchStatusLabel', () => {
+  it('maps every batch status to Thai', () => {
+    expect(scheduleBatchStatusLabel('DRAFT')).toBe('ร่าง');
+    expect(scheduleBatchStatusLabel('APPROVED')).toBe('อนุมัติแล้ว');
+    expect(scheduleBatchStatusLabel('PUBLISHED')).toBe('เผยแพร่แล้ว');
+  });
+  it('falls back safely on an unknown status', () => {
+    expect(scheduleBatchStatusLabel('XYZ')).toBe('สถานะอื่น');
+  });
+});
+
+describe('faultStatusLabel', () => {
+  it('maps every fault status to Thai', () => {
+    for (const code of ['OPEN', 'IN_REPAIR', 'RETEST', 'RESOLVED', 'REOPENED']) {
+      const out = faultStatusLabel(code);
+      expect(out.length).toBeGreaterThan(0);
+      expect(out).not.toBe(code);
+    }
+  });
+  it('falls back safely on an unknown status', () => {
+    expect(faultStatusLabel('XYZ')).toBe('สถานะอื่น');
+  });
+});
+
+describe('faultSeverityLabel', () => {
+  it('maps CRITICAL/NON_CRITICAL to Thai', () => {
+    expect(faultSeverityLabel('CRITICAL')).toBe('วิกฤต');
+    expect(faultSeverityLabel('NON_CRITICAL')).toBe('ทั่วไป');
+  });
+  it('falls back safely on an unknown severity', () => {
+    expect(faultSeverityLabel('XYZ')).toBe('สถานะอื่น');
   });
 });
