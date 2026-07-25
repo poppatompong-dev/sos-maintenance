@@ -9,10 +9,13 @@ import {
 
 function portFor(
   state: WorkOrderState | null,
+  opts: { validTechnicianIds?: string[] } = {},
 ): { port: WorkOrderTransitionPort; applied: ApplyTransitionInput[] } {
   const applied: ApplyTransitionInput[] = [];
+  const validTechnicianIds = new Set(opts.validTechnicianIds ?? ['tech-1']);
   const port: WorkOrderTransitionPort = {
     loadByCode: vi.fn(async () => state),
+    assigneeIsActiveTechnician: vi.fn(async (userId) => validTechnicianIds.has(userId)),
     applyTransition: vi.fn(async (input) => {
       applied.push(input);
       return { status: input.to, version: state ? state.version + 1 : 1 };
@@ -49,9 +52,48 @@ describe('transitionWorkOrder', () => {
       to: 'ASSIGNED',
       actor: { userId: 'p1', roles: ['PLANNER'] },
       now: new Date(),
+      assigneeUserId: 'tech-1',
     });
     expect(res).toMatchObject({ from: 'DRAFT', status: 'ASSIGNED', version: 4 });
-    expect(applied[0]).toMatchObject({ to: 'ASSIGNED', expectedVersion: 3 });
+    expect(applied[0]).toMatchObject({ to: 'ASSIGNED', expectedVersion: 3, assigneeUserId: 'tech-1' });
+  });
+
+  it('rejects ASSIGNED with no assigneeUserId (ASSIGNEE_REQUIRED)', async () => {
+    const { port, applied } = portFor(draft);
+    await expect(
+      transitionWorkOrder(port, {
+        code: 'WO-1',
+        to: 'ASSIGNED',
+        actor: { userId: 'p1', roles: ['PLANNER'] },
+        now: new Date(),
+      }),
+    ).rejects.toMatchObject({ code: 'ASSIGNEE_REQUIRED' });
+    expect(applied).toHaveLength(0);
+  });
+
+  it('rejects ASSIGNED to an unknown/inactive technician (ASSIGNEE_INVALID)', async () => {
+    const { port, applied } = portFor(draft, { validTechnicianIds: ['tech-1'] });
+    await expect(
+      transitionWorkOrder(port, {
+        code: 'WO-1',
+        to: 'ASSIGNED',
+        actor: { userId: 'p1', roles: ['PLANNER'] },
+        now: new Date(),
+        assigneeUserId: 'not-a-technician',
+      }),
+    ).rejects.toMatchObject({ code: 'ASSIGNEE_INVALID' });
+    expect(applied).toHaveLength(0);
+  });
+
+  it('does not require an assignee for a non-ASSIGNED target', async () => {
+    const { port } = portFor(draft);
+    const res = await transitionWorkOrder(port, {
+      code: 'WO-1',
+      to: 'CANCELLED',
+      actor: { userId: 'p1', roles: ['PLANNER'] },
+      now: new Date(),
+    });
+    expect(res.status).toBe('CANCELLED');
   });
 
   it('rejects an edge not in the graph', async () => {
@@ -85,6 +127,7 @@ describe('transitionWorkOrder', () => {
       to: 'ASSIGNED',
       actor: { userId: 'p1', roles: ['EXECUTIVE', 'PLANNER'] },
       now: new Date(),
+      assigneeUserId: 'tech-1',
     });
     expect(res.status).toBe('ASSIGNED');
   });

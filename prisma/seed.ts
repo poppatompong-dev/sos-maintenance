@@ -165,6 +165,14 @@ async function main() {
     },
   });
 
+  // Real technician (owner-confirmed 2026-07-25, no surname given — see doc 07
+  // §Open inputs: never invent personal data, only seed names the owner supplies).
+  await prisma.user.upsert({
+    where: { username: 'somchai' },
+    update: { displayName: 'สมชาย', roles: [AppRole.TECHNICIAN], active: true, retiredAt: null },
+    create: { username: 'somchai', displayName: 'สมชาย', roles: [AppRole.TECHNICIAN] },
+  });
+
   const assetType = await prisma.assetType.upsert({
     where: { key: ASSET_TYPE_KEY },
     update: { name: 'เสาขอความช่วยเหลือฉุกเฉิน SOS' },

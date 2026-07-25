@@ -5,6 +5,58 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-25 — Real technician picker for the ASSIGNED transition
+
+**FACT:** The Planner console's "มอบหมาย" (ASSIGNED) action only flipped
+status — no technician was actually picked, because there was no roster of
+real people to pick from (`prisma/seed.ts` seeded exactly one generic
+`internal-operator` user). This was flagged as genuinely blocked, not just
+unbuilt, in the Planner-console-v1 entry below — fabricating a name would
+violate `docs/spec/07_DECISIONS_RISKS_OPEN_ITEMS.md`'s explicit "never invent
+personal data" instruction. **Unblocked 2026-07-25: the project owner
+confirmed a real technician, สมชาย (no surname), for this system.** Seeded as
+a `User` row with `roles: [TECHNICIAN]` only (not the internal actor's
+all-roles grant) — `prisma/seed.ts`, idempotent `upsert` on `username:
+'somchai'`.
+
+**Built, now that a real name exists to assign:**
+- `GET /api/technicians` (`src/server/queries/technicians.ts`) —
+  active-technician roster, gated on `workorder:assign` (same bar as
+  performing the assignment).
+- `transitionWorkOrder` (`src/server/services/transition-work-order.ts`) now
+  requires `assigneeUserId` when `to === 'ASSIGNED'` and verifies it via a new
+  port method, `assigneeIsActiveTechnician` — rejects with `ASSIGNEE_REQUIRED`
+  (400, no id given) or `ASSIGNEE_INVALID` (400, id isn't a real active
+  technician) before touching the database. A client-supplied id is never
+  trusted blindly.
+- `prisma-work-order-port.ts`: when applying an `ASSIGNED` transition, the
+  same DB transaction now `upsert`s an `Assignment` row (idempotent on
+  `[workOrderId, userId]`, so re-clicking the same assignment is a no-op, not
+  an error) — reusing the exact pattern `demo-fixture.ts` already established
+  for the guarded demo's own assignment.
+- `WorkOrderActionPanel` (`src/components/WorkOrderActions.tsx`): the
+  "มอบหมาย" action now shows a technician `<select>` (fetched from
+  `/api/technicians`) before the button is enabled — auto-selects when there's
+  exactly one technician, but never fabricates a choice when the roster is
+  empty (shows an honest "ยังไม่มีช่างในระบบ" message instead).
+
+**Test evidence:** `pnpm test` → **255/255** (3 new tests in
+`transition-work-order.test.ts`: `ASSIGNEE_REQUIRED`, `ASSIGNEE_INVALID`, and
+a non-`ASSIGNED` target needing no assignee). `pnpm test:integration` →
+**69/71** (2 pre-existing unrelated failures) — the transition itest now
+seeds a real technician fixture and asserts the `Assignment` row lands
+correctly, plus a new `ASSIGNEE_REQUIRED` case against a fresh work order.
+`typecheck`/`lint`/`build` clean. Live-verified against the local DB: ran
+`pnpm db:seed`, confirmed `สมชาย` present with `roles: ["TECHNICIAN"]`;
+opened a throwaway `DRAFT` work order in `/work-orders`, the picker listed
+both real users (`เจ้าหน้าที่ภายใน (ไม่ใช้ login)`, `สมชาย` — no fabricated
+names), selected สมชาย, clicked "มอบหมาย → มอบหมายแล้ว" — DB confirmed
+`WorkOrder.status = ASSIGNED` and one `Assignment` row linked to สมชาย's real
+user id. Throwaway fixture deleted after; guarded demo fixture untouched
+(still 27 assets / 2 work orders).
+
+---
+
 ## 2026-07-25 — Offline mutation queue for field checklist submission
 
 **FACT:** `src/domain/sync/envelope.ts` (idempotency/conflict primitives) and

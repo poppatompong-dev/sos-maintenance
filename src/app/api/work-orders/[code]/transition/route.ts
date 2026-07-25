@@ -28,6 +28,8 @@ const bodySchema = z.object({
     'CANCELLED',
   ]),
   note: z.string().max(2000).optional(),
+  /** Required when `to` is `ASSIGNED` — see `transitionWorkOrder`. */
+  assigneeUserId: z.string().uuid().optional(),
 });
 
 // Which permission(s) may even attempt each target status. CLOSED is reachable
@@ -49,7 +51,7 @@ export async function POST(
   ctx: { params: Promise<{ code: string }> },
 ): Promise<Response> {
   try {
-    const { to, note } = bodySchema.parse(await req.json());
+    const { to, note, assigneeUserId } = bodySchema.parse(await req.json());
     const session = requireAnyPermission(await getSession(req), PERMISSIONS_BY_TARGET[to]);
     const { code } = await ctx.params;
 
@@ -59,6 +61,7 @@ export async function POST(
       actor: session,
       note,
       now: new Date(),
+      assigneeUserId,
     });
     return json(result);
   } catch (err) {

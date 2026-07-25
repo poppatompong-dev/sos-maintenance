@@ -30,10 +30,14 @@ export interface ApplyTransitionInput {
   now: Date;
   /** Optimistic-concurrency guard — persist only if the row still has this. */
   expectedVersion: number;
+  /** Required when `to === 'ASSIGNED'` — who the work order is actually handed to. */
+  assigneeUserId?: string;
 }
 
 export interface WorkOrderTransitionPort {
   loadByCode(code: string): Promise<WorkOrderState | null>;
+  /** True when `userId` is a real, active technician — never trust a client-supplied id blindly. */
+  assigneeIsActiveTechnician(userId: string): Promise<boolean>;
   applyTransition(
     input: ApplyTransitionInput,
   ): Promise<{ status: WorkOrderStatus; version: number }>;
@@ -54,6 +58,7 @@ export interface TransitionCommand {
   actor: { userId: string; roles: AppRole[] };
   note?: string;
   now: Date;
+  assigneeUserId?: string;
 }
 
 export interface TransitionResult {
@@ -96,6 +101,15 @@ export async function transitionWorkOrder(
     );
   }
 
+  if (cmd.to === 'ASSIGNED') {
+    if (!cmd.assigneeUserId) {
+      throw new WorkOrderTransitionError('ASSIGNEE_REQUIRED', 'ต้องเลือกช่างที่จะมอบหมายงาน');
+    }
+    if (!(await port.assigneeIsActiveTechnician(cmd.assigneeUserId))) {
+      throw new WorkOrderTransitionError('ASSIGNEE_INVALID', 'ไม่พบช่างที่เลือก หรือช่างไม่ได้ใช้งานอยู่');
+    }
+  }
+
   const applied = await port.applyTransition({
     workOrderId: wo.id,
     from: wo.status,
@@ -104,6 +118,7 @@ export async function transitionWorkOrder(
     note: cmd.note,
     now: cmd.now,
     expectedVersion: wo.version,
+    assigneeUserId: cmd.to === 'ASSIGNED' ? cmd.assigneeUserId : undefined,
   });
 
   return { code: wo.code, from: wo.status, status: applied.status, version: applied.version };

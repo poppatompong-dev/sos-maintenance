@@ -18,6 +18,7 @@ let assetTypeId: string;
 let locationId: string;
 let assetId: string;
 let workOrderId: string;
+let technicianUserId: string;
 const CODE = `WO-LC-${suffix}`;
 
 beforeAll(() => {
@@ -40,14 +41,20 @@ beforeAll(async () => {
     data: { code: CODE, kind: 'MONTHLY_FIELD', assetId, status: 'DRAFT' },
   });
   workOrderId = wo.id;
+  const technician = await prisma.user.create({
+    data: { username: `tech_lc_${suffix}`, displayName: 'ช่างทดสอบ', roles: ['TECHNICIAN'] },
+  });
+  technicianUserId = technician.id;
 });
 
 afterAll(async () => {
+  await prisma.assignment.deleteMany({ where: { workOrderId } });
   await prisma.workLog.deleteMany({ where: { workOrderId } });
   await prisma.workOrder.deleteMany({ where: { id: workOrderId } });
   await prisma.asset.deleteMany({ where: { id: assetId } });
   await prisma.location.deleteMany({ where: { id: locationId } });
   await prisma.assetType.deleteMany({ where: { id: assetTypeId } });
+  await prisma.user.deleteMany({ where: { id: technicianUserId } });
   await prisma.$disconnect();
 });
 
@@ -56,7 +63,11 @@ function post(to: string, roles: string, userId: string, note?: string): Promise
     new Request(`http://local/api/work-orders/${CODE}/transition`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-dev-roles': roles, 'x-dev-user': userId },
-      body: JSON.stringify({ to, note }),
+      body: JSON.stringify({
+        to,
+        note,
+        ...(to === 'ASSIGNED' ? { assigneeUserId: technicianUserId } : {}),
+      }),
     }),
     { params: Promise.resolve({ code: CODE }) },
   );
@@ -80,8 +91,28 @@ describe('POST /api/work-orders/:code/transition', () => {
     expect(res.status).toBe(403);
   });
 
+  it('400 ASSIGNEE_REQUIRED when assigning with no assigneeUserId', async () => {
+    const code2 = `WO-NOASSIGNEE-${suffix}`;
+    const wo2 = await prisma.workOrder.create({ data: { code: code2, kind: 'MONTHLY_FIELD', assetId, status: 'DRAFT' } });
+    const res = await POST(
+      new Request(`http://local/api/work-orders/${code2}/transition`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-dev-roles': 'PLANNER', 'x-dev-user': PLANNER },
+        body: JSON.stringify({ to: 'ASSIGNED' }),
+      }),
+      { params: Promise.resolve({ code: code2 }) },
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('ASSIGNEE_REQUIRED');
+    await prisma.workOrder.deleteMany({ where: { id: wo2.id } });
+  });
+
   it('runs the full lifecycle to CLOSED with separation of duties', async () => {
     expect((await post('ASSIGNED', 'PLANNER', PLANNER)).status).toBe(200);
+    const assignment = await prisma.assignment.findUnique({
+      where: { workOrderId_userId: { workOrderId, userId: technicianUserId } },
+    });
+    expect(assignment).not.toBeNull();
     expect((await post('IN_PROGRESS', 'TECHNICIAN', TECH)).status).toBe(200);
     expect((await post('SUBMITTED', 'TECHNICIAN', TECH)).status).toBe(200);
 

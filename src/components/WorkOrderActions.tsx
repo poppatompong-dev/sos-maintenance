@@ -47,6 +47,10 @@ const TONE_CLASS: Record<string, string> = {
   danger: 'border border-down-tint bg-down-tint/40 text-down-ink hover:bg-down-tint',
 };
 
+interface TechnicianOption {
+  id: string;
+  displayName: string;
+}
 interface RepairEvidence {
   cause: string;
   fixDescription: string;
@@ -95,10 +99,13 @@ export function WorkOrderActionPanel({
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<WorkOrderDetail | null>(null);
+  const [technicians, setTechnicians] = useState<TechnicianOption[] | null>(null);
+  const [assigneeId, setAssigneeId] = useState('');
 
   const actions = PLANNER_NEXT[status] ?? [];
   const showRepairEvidence = kind === 'CORRECTIVE' && status === 'SUBMITTED';
   const loadingDetail = showRepairEvidence && detail === null && error === null;
+  const showAssigneePicker = actions.some((a) => a.to === 'ASSIGNED');
 
   useEffect(() => {
     if (!showRepairEvidence) return;
@@ -116,8 +123,30 @@ export function WorkOrderActionPanel({
     };
   }, [code, showRepairEvidence]);
 
+  useEffect(() => {
+    if (!showAssigneePicker) return;
+    let cancelled = false;
+    fetch('/api/technicians', { cache: 'no-store' })
+      .then((res) => readJson<{ technicians: TechnicianOption[] }>(res))
+      .then((d) => {
+        if (cancelled) return;
+        setTechnicians(d.technicians);
+        if (d.technicians.length === 1) setAssigneeId(d.technicians[0].id);
+      })
+      .catch((cause) => {
+        if (!cancelled) setError(cause instanceof Error ? cause.message : 'โหลดรายชื่อช่างไม่สำเร็จ');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showAssigneePicker]);
+
   async function act(to: string) {
     if (working) return;
+    if (to === 'ASSIGNED' && !assigneeId) {
+      setError('กรุณาเลือกช่างที่จะมอบหมายงานก่อน');
+      return;
+    }
     setWorking(true);
     setError(null);
     try {
@@ -125,7 +154,11 @@ export function WorkOrderActionPanel({
         await fetch(`/api/work-orders/${encodeURIComponent(code)}/transition`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ to, ...(note.trim() ? { note: note.trim() } : {}) }),
+          body: JSON.stringify({
+            to,
+            ...(note.trim() ? { note: note.trim() } : {}),
+            ...(to === 'ASSIGNED' ? { assigneeUserId: assigneeId } : {}),
+          }),
         }),
       );
       router.refresh();
@@ -180,6 +213,30 @@ export function WorkOrderActionPanel({
         </div>
       ) : null}
 
+      {showAssigneePicker ? (
+        <label className="mb-3 block text-xs text-ink" htmlFor={`assignee-${code}`}>
+          มอบหมายให้ช่าง
+          <select
+            id={`assignee-${code}`}
+            value={assigneeId}
+            onChange={(e) => setAssigneeId(e.target.value)}
+            className="mt-1 min-h-11 w-full max-w-md rounded-lg border border-border-strong bg-bg px-3 py-2 text-sm text-ink"
+          >
+            <option value="">
+              {technicians === null ? 'กำลังโหลดรายชื่อช่าง…' : 'เลือกช่าง'}
+            </option>
+            {(technicians ?? []).map((t) => (
+              <option key={t.id} value={t.id}>{t.displayName}</option>
+            ))}
+          </select>
+          {technicians?.length === 0 ? (
+            <span className="mt-1 block text-xs text-down-ink">
+              ยังไม่มีช่างในระบบ — มอบหมายงานไม่ได้จนกว่าจะมีรายชื่อช่าง
+            </span>
+          ) : null}
+        </label>
+      ) : null}
+
       <label className="block text-xs text-ink" htmlFor={`note-${code}`}>
         หมายเหตุ (ถ้ามี)
         <textarea
@@ -205,7 +262,7 @@ export function WorkOrderActionPanel({
             <button
               key={a.to}
               type="button"
-              disabled={working}
+              disabled={working || (a.to === 'ASSIGNED' && !assigneeId)}
               onClick={() => void act(a.to)}
               className={`min-h-9 rounded-lg px-3 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${TONE_CLASS[a.tone]}`}
             >

@@ -71,6 +71,14 @@ export function createPrismaWorkOrderPort(
       };
     },
 
+    async assigneeIsActiveTechnician(userId: string): Promise<boolean> {
+      const user = await client.user.findFirst({
+        where: { id: userId, active: true, roles: { has: 'TECHNICIAN' } },
+        select: { id: true },
+      });
+      return user !== null;
+    },
+
     async applyTransition(input: ApplyTransitionInput) {
       return client.$transaction(async (tx) => {
         const data: Prisma.WorkOrderUpdateInput = {
@@ -106,6 +114,17 @@ export function createPrismaWorkOrderPort(
             occurredAt: input.now,
           },
         });
+
+        if (input.to === 'ASSIGNED' && input.assigneeUserId) {
+          // Re-assigning the same technician to the same work order is a
+          // no-op, not an error (the unique constraint would otherwise throw
+          // on a repeat click).
+          await tx.assignment.upsert({
+            where: { workOrderId_userId: { workOrderId: input.workOrderId, userId: input.assigneeUserId } },
+            create: { workOrderId: input.workOrderId, userId: input.assigneeUserId, assignedAt: input.now },
+            update: {},
+          });
+        }
 
         const row = await tx.workOrder.findUniqueOrThrow({
           where: { id: input.workOrderId },

@@ -56,7 +56,12 @@ export function errorResponse(err: unknown): Response {
     return json({ error: err.code, message: err.message }, inspectionStatus(err.code));
   }
   if (err instanceof WorkOrderTransitionError) {
-    const status = err.code === 'WORKORDER_NOT_FOUND' ? 404 : 409;
+    const status =
+      err.code === 'WORKORDER_NOT_FOUND'
+        ? 404
+        : err.code === 'ASSIGNEE_REQUIRED' || err.code === 'ASSIGNEE_INVALID'
+          ? 400
+          : 409;
     return json({ error: err.code, message: err.message }, status);
   }
   if (err instanceof RepairError) {
