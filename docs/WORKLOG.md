@@ -5,6 +5,47 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-25 — Shared-password gate in front of the app (`src/proxy.ts`)
+
+**FACT:** The release-blocker list called for restricting the public Vercel URL
+because `AUTH_MODE=internal` gives every reachable caller full permissions —
+the plan on record was Vercel Deployment Protection, configured from the
+Vercel dashboard. That plan turned out not to be viable: Vercel Authentication
+explicitly excludes the production custom domain, and Password Protection
+needs the paid Pro-plan Advanced add-on ($150/mo), which is out of scope for
+this project's free/OSS-only constraint.
+
+**Built instead:** `src/proxy.ts` (Next 16 renamed `middleware.ts`) — HTTP
+Basic Auth checked against a single `SITE_ACCESS_PASSWORD` env var, gating
+every route including API routes. **Fails closed:** any deployed build
+(`NODE_ENV === 'production'`) with no password configured returns 503 — a
+missing password never means wide open. **Fails open in local dev** so
+`pnpm dev` needs no extra setup. Thai-language 401/503 messages;
+`WWW-Authenticate` header so the browser's native credential prompt handles
+it — no login page to build. `.env.example` documents the new var.
+
+**Verification:** `pnpm build && pnpm start` against a real production build —
+no password configured → 503; no auth header → 401 + `WWW-Authenticate`;
+wrong password → 401; correct password → 200, including on an API route.
+Local dev unaffected (200, no password required). `pnpm test` 255/255,
+typecheck/lint/build clean.
+
+**Status: committed locally (`816ad2e`), value being set in Vercel now — see
+`RESUME_HERE.md` for exactly what's left.** Pushing deploys immediately via
+Vercel's GitHub integration, and the fail-closed behavior means the site 503s
+in production until `SITE_ACCESS_PASSWORD` is set in Vercel's Production +
+Preview env vars — that has to happen *before* the push, not after.
+**Deliberately not automated end-to-end:** generating/typing/viewing the
+actual password value is treated the same as the Neon credential — Claude
+does not handle secret values, even under broad task authorization, because
+a leaked gate password defeats the entire protection. Claude filled in the
+non-secret parts (opened the Vercel dashboard to the right project's
+environment-variables screen, pre-filled the `Key` field, confirmed
+`Sensitive` + `Production and Preview` were already selected) and left the
+`Value` field for the owner to type themselves.
+
+---
+
 ## 2026-07-25 — Real technician picker for the ASSIGNED transition
 
 **FACT:** The Planner console's "มอบหมาย" (ASSIGNED) action only flipped

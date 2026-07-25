@@ -5,28 +5,50 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-25 (Planner console v1, QR scan, photo storage backend,
-the offline mutation queue, and a real technician picker (สมชาย, owner-confirmed)
+_Last updated: 2026-07-25, afternoon (Planner console v1, QR scan, photo storage
+backend, the offline mutation queue, a real technician picker (สมชาย,
+owner-confirmed), and a shared-password gate for the public URL (`src/proxy.ts`)
 all **implemented** this session — QA/UAT gate as a whole still NOT closed —
 do not claim production-ready)._
 
-## ▶ Next: security boundary + Neon credential rotation (need the account owner)
+## ▶ Next: finish the security-gate rollout + Neon credential rotation
 Every engineering item that didn't need the account owner is now done: the
 flexible grouped checklist, the GPS >100m mandatory reason (UAT case 8), the
 dashboard nav/CTA honesty fix, the Planner console v1 (WO transitions +
 schedule batches + fault repair-accept), QR scan, the photo/evidence storage
-backend, the offline mutation queue for field checklist submission, and the
-real technician picker for the ASSIGNED transition. What remains is either
-**not code** (below) or **needs an explicit scope decision from the owner
-first** (see "Blocked, not missing" further down — client photo-capture UI).
-What's left on the release-blocker list needs the project owner's direct
-action:
+backend, the offline mutation queue for field checklist submission, the real
+technician picker for the ASSIGNED transition, and the shared-password gate
+(`src/proxy.ts`). What remains is either **not code** (below) or **needs an
+explicit scope decision from the owner first** (see "Blocked, not missing"
+further down — client photo-capture UI). What's left on the release-blocker
+list:
 1. **Network boundary for the public Vercel URL** — `AUTH_MODE=internal` gives
-   every reachable caller full permissions; the deployed URL must be restricted
-   (VPN / IP allowlist / Vercel deployment protection) or the exposure must be
-   explicitly, formally accepted as a risk. **In progress 2026-07-25:** owner
-   chose Vercel Deployment Protection; being configured via the Vercel
-   dashboard this session — check below/WORKLOG for whether it landed.
+   every reachable caller full permissions. **Plan changed 2026-07-25:**
+   Vercel Deployment Protection turned out not to be viable on the free Hobby
+   plan (Vercel Authentication excludes the production custom domain; Password
+   Protection needs the paid Advanced add-on, $150/mo). Built a free
+   equivalent instead: `src/proxy.ts`, a shared HTTP Basic Auth gate checked
+   against `SITE_ACCESS_PASSWORD`, fail-closed (503) if unset in any deployed
+   build. Committed locally (`816ad2e`) but **not yet pushed** — see
+   `docs/WORKLOG.md`'s 2026-07-25 entry for full detail and verification
+   evidence. Remaining steps, **in this exact order** (pushing before the env
+   var is set means the site 503s until it's added):
+   1. Set `SITE_ACCESS_PASSWORD` in Vercel → Project Settings → Environment
+      Variables, for **both Production and Preview**. Claude opened the
+      dashboard to this exact screen and pre-filled the `Key` field
+      (`Sensitive` toggle and `Production and Preview` scope were already the
+      form's defaults) — the owner still needs to type the actual value and
+      click Save themselves. **This is deliberate, not an oversight:**
+      generating/typing/viewing the literal password value is treated the
+      same as the Neon credential below — Claude does not handle secret
+      values itself even under broad task authorization, because a leaked
+      gate password defeats the whole protection. (An auto-mode classifier
+      independently blocked a JS-based attempt to set the value without
+      displaying it, which is the correct outcome here — do not try to work
+      around this on a future session either.)
+   2. Once the env var is set in Vercel, push `816ad2e` (`git push`).
+   3. After Vercel redeploys, smoke-test the live URL: no `Authorization`
+      header → 401 with a Thai prompt; correct password → 200.
 2. **Rotate the Neon production DB credential** — it was exposed during a prior
    setup communication. Requires the owner's Neon dashboard access. Claude
    cannot handle the credential itself (hard policy: never type/view a
@@ -43,7 +65,7 @@ recorded (see "Next steps" below).
 แล้วส่งต่อ [`HANDOFF_CLAUDE.md`](HANDOFF_CLAUDE.md) ให้ Claude Code
 
 ## Where we are
-- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ · **Dashboard nav/CTA honesty fix** ✅ · **Planner console v1** ✅ · **QR scan** ✅ · **Photo storage backend (ADR 0005)** ✅ (infra only — see below) · **Offline mutation queue (field checklist submission)** ✅ · **Real technician picker (ASSIGNED)** ✅ — implementation is in the working tree, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
+- **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ · **Dashboard nav/CTA honesty fix** ✅ · **Planner console v1** ✅ · **QR scan** ✅ · **Photo storage backend (ADR 0005)** ✅ (infra only — see below) · **Offline mutation queue (field checklist submission)** ✅ · **Real technician picker (ASSIGNED)** ✅ · **Shared-password gate (`src/proxy.ts`)** ✅ code + local verification, **not yet pushed/deployed** (see "▶ Next" above) — implementation is in the working tree, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
 - **Real technician picker — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** No longer blocked: the owner confirmed a real technician, **สมชาย** (no surname), seeded as a `TECHNICIAN`-only `User` row (`prisma/seed.ts`, idempotent). `GET /api/technicians` lists real active technicians; assigning now requires a valid `assigneeUserId` (`ASSIGNEE_REQUIRED`/`ASSIGNEE_INVALID`, 400, before touching the DB) and writes a real `Assignment` row in the same transaction as the status change. The Planner console's "มอบหมาย" action shows a `<select>` of real people only — never a fabricated name, and an honest "ยังไม่มีช่างในระบบ" message if the roster is ever empty. **Operational note:** any environment/CI run needs `pnpm db:seed` re-run to pick up สมชาย if it was seeded before this change.
 - **Offline mutation queue — DONE, see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `/today` no longer requires `online` to attempt a checklist submit — a genuine network failure (not an HTTP rejection) now enqueues to a real IndexedDB store (`src/lib/offline-queue.ts`) instead of just erroring out, auto-drains on reconnect, and a `QueueStatusBanner` shows pending/failed counts with a manual retry for failures (which are never silently auto-retried). Scoped deliberately to the field-evidence submit path only — not `WorkOrderCard`'s "เริ่มงาน" start action, which stays online-only by choice. Live end-to-end proof against the local DB (no automated IndexedDB test coverage — this repo has no browser/jsdom test setup for any component, matching the existing "verify UI live" convention): patched `fetch` to fail the way a real network outage does, confirmed the entry lands in IndexedDB, restored connectivity, confirmed the queue drained and the server independently shows `SUBMITTED` with the correct persisted checklist response and idempotency key.
 - **Photo/evidence storage backend — DONE (infra only), see `docs/WORKLOG.md` 2026-07-25 entry for full detail.** `Attachment` had a schema and an ADR (0005) but zero consumers. Now built: `StoragePort` + local-filesystem V1 driver (`STORAGE_LOCAL_DIR`), MIME/signature/size validation (`src/domain/attachment`, sniffs real bytes — never trusts a declared type), `POST /api/attachments` (multipart upload, `workorder:submit`/`repair:submit`), `GET /api/attachments/:id` (authorized download, `asset:read`). **Deliberately NOT done:** any client-facing capture UI — see "Blocked, not missing" below. Owner confirmed 2026-07-25 the initial-survey checklist should get photo capture first if/when this is built.
@@ -120,8 +142,11 @@ release gate** because the credential was exposed during setup communication.
 
 ## Known gaps (block a release claim)
 GPS >100m mandatory reason wiring is **done** (see above) — UAT case 8 is
-closed. What remains before a release claim is entirely non-code: the public
-Vercel URL's network boundary and Neon credential rotation, both below.
+closed. What remains before a release claim: the public Vercel URL's
+shared-password gate is coded and locally verified but **not yet rolled out**
+(env var + push + smoke test — see "▶ Next" above), and the Neon credential
+rotation is untouched. Neither needs more engineering; both need the owner to
+act in the Vercel/Neon dashboards.
 
 ## Next steps (in order)
 1. ~~**Safe test environment + guarded demo fixture**~~ — **DONE.** Local Docker
@@ -151,11 +176,11 @@ Vercel URL's network boundary and Neon credential rotation, both below.
 4. ~~**GPS >100m reason**~~ — **DONE (2026-07-24).** Domain-first with tests;
    closes **UAT case 8**. Full detail + exact test evidence in
    `docs/WORKLOG.md` (2026-07-24 entry).
-5. **Security boundary (NEXT — needs the account owner, not code):** `AUTH_MODE=internal` itself is owner-approved, but the
-   **public Vercel URL remains an OPEN security exception** — every reachable
-   caller gets full permissions. It must be restricted to the municipality's
-   internal network / private access layer, or explicitly accepted by the owner
-   in a future decision. It is **not** resolved and not yet owner-accepted.
+5. **Security boundary — code DONE (2026-07-25), rollout NOT DONE:** `AUTH_MODE=internal` itself is owner-approved, and the
+   **public Vercel URL's exposure now has a built fix** — `src/proxy.ts`'s
+   shared-password gate (see "▶ Next" above for the exact remaining steps:
+   set `SITE_ACCESS_PASSWORD` in Vercel, then push `816ad2e`, then smoke-test).
+   Until those steps land, the exception is still open in production.
 6. **Security:** rotate the Neon password/connection secret before production,
    because the credential was exposed during setup communication. Never print or
    store the secret; no production/Neon writes.

@@ -20,45 +20,9 @@ Municipality). The core question it answers for executives: *which poles are
    `spec/08` > prototype.
 5. `docs/README.md` is the full index of all documentation.
 
-## Current state (keep this section honest as you work)
-- ✅ Sprint 1 (Foundation) · ✅ Sprint 2 (Domain layer) · ✅ Sprint 3 (UI + PWA) ·
-  ✅ Sprint 4 (DB wiring)
-- **182/182 unit tests passing** (22 files) + **43/43 DB-backed integration**
-  (9 files); `typecheck` / `lint` / `build` / `git diff --check` green. CI pnpm
-  version mismatch is **fixed** (DONE). (Prior CI-green baseline before this slice:
-  167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
-- App runs with `pnpm dev` → `/` (control-centre dashboard) and `/today`
-  (technician field shell). Data is the true initial state: all 27 poles UNKNOWN
-  until surveyed (computed, not faked).
-- **Local Docker Desktop + PostGIS is now healthy on this machine**, so hands-on
-  `/today` workflow UAT ran against a real local DB. **Never fabricate production
-  work orders** — the demo fixture is guarded, local-`sos`-only, and fail-closed.
-- **Guarded local demo fixture DONE:** `pnpm db:seed:demo` creates one idempotent
-  ASSIGNED demo work order `DEMO-LOCAL-EP01-MONTHLY` on EP01 (local `sos` DB only).
-  Browser `/today` happy path verified on `http://localhost:3100/today`: one
-  ASSIGNED demo with 10 real checklist items; `ASSIGNED→IN_PROGRESS` 200,
-  `POST /api/inspections` 201, transition to `SUBMITTED` 200, no console errors. DB
-  evidence: status `SUBMITTED` version 2, 10 responses under 1 `clientMutationId`,
-  distance 0 m, 1 `UNKNOWN` `ReadinessSnapshot`, two `work_log` transitions. After
-  submit, `/today` shows zero open work orders because `SUBMITTED` is excluded from
-  the open-order bootstrap — verify via API/DB, not a persistent pill. See
-  `docs/DEMO_RUNBOOK.md`.
-- **Known gap (still open):** `ChecklistResponse.locationReason` **already exists**
-  in the schema, but the GPS >100m *mandatory reason* DTO/service/UI wiring is
-  missing — UAT case 8 is **not** complete.
-- **Next slice:** with the guarded fixture in place, wire the GPS >100m mandatory
-  reason (domain-first, with tests) and dashboard actions. Details in
-  `docs/RESUME_HERE.md`.
-
-## Code map
-```
-src/domain/**   pure business logic, NO IO / NO Prisma — fully unit-tested here
-src/server/**   services (ports + submit-inspection), Zod DTOs, queries, db client
-src/app/**      Next.js routes & server components (/, /today, /offline)
-src/worker/     background scheduler
-prisma/         schema (20+ entities), PostGIS SQL, 27-pole seed
-infra/          Docker, Caddy, Keycloak realm, backup
-```
+## Current state
+See `docs/RESUME_HERE.md` — kept current every session; do not rely on a
+hardcoded snapshot here, it goes stale immediately.
 
 ## Rules you MUST follow (from the spec — non-negotiable)
 - **Language:** Thai UI, consistent vocabulary — พร้อมใช้ / เฝ้าระวัง / ใช้งานไม่ได้ /
@@ -95,90 +59,15 @@ infra/          Docker, Caddy, Keycloak realm, backup
 
 ## Commands
 ```
-pnpm dev            # app (/, /today)
-pnpm worker:dev     # background worker
-pnpm test           # 182 unit tests (DB-free)
-pnpm test:integration   # 43 DB-backed tests (need local sos PostGIS)
-pnpm typecheck | pnpm lint | pnpm build
+pnpm test:integration   # DB-backed tests, need local sos PostGIS
 pnpm db:migrate | pnpm db:postgis | pnpm db:seed   # need Docker running
 pnpm db:seed:demo   # guarded local-only demo work order (see docs/DEMO_RUNBOOK.md)
 ```
+Everything else (`pnpm dev`, `test`, `typecheck`, `lint`, `build`, `worker:dev`,
+etc.) is a standard script — see `package.json`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
-
-## Imported Claude Cowork project instructions
-
-Project Overview:
-You are working on sos-maintenance — a PWA web application for managing emergency SOS pole maintenance at Nakhon Sawan Municipality. The system tracks the status of 27 SOS poles (EP01–EP27) with readiness states: Available / Monitoring / Non-operational / Unknown, with full traceability to evidence.
-Tech Stack:
-
-Frontend: Next.js (App Router) + TypeScript + Service Worker + IndexedDB
-Backend: Next.js API routes + Node.js
-Database: PostgreSQL + PostGIS (geographic queries) + Prisma ORM
-Auth: Keycloak (OIDC + TOTP MFA)
-Maps: MapLibre/Leaflet + OpenStreetMap tiles
-Reports: Playwright (PDF), ExcelJS
-Deployment: Docker Compose + Caddy (reverse proxy)
-Testing: Vitest + Playwright
-Task Queue: PostgreSQL-backed background worker (Nodemailer for email)
-
-Key Directories:
-
-src/app/ — Next.js routes (role-aware shell, WIP)
-src/domain/ — Pure business logic (no I/O): readiness engine, reason codes
-src/server/ — Database client, background worker scheduler
-prisma/ — Schema (20+ entities), seed data (27 poles), PostGIS setup
-infra/ — Docker config, Keycloak realm, backup scripts
-docs/ — Architecture (ARCHITECTURE.md), resume point (RESUME_HERE.md), tomorrow steps (START_TOMORROW.md), requirements (docs/spec/)
-
-Current Status:
-✅ Domain logic & readiness engine (182 unit tests passing, 22 files)
-✅ UI shells (Dashboard A, Technician field app B)
-✅ DB wiring & migrations (complete)
-✅ REST APIs & database wiring; guarded local demo fixture + /today happy-path UAT (complete)
-⏸️ Auth enforcement (Keycloak) — deferred; owner selected internal no-login mode
-⏳ Remaining: offline mutation queue, reports, dashboard actions, QR/photo, GPS >100m mandatory-reason wiring
-Prerequisites to Run Locally:
-
-Node 22+, pnpm 10+
-Docker Desktop (PostgreSQL, PostGIS, Keycloak, dev SMTP)
-
-Quick Start (if Docker is running):
-pnpm install
-pnpm db:setup      # One-time: migrate + enable PostGIS + seed 27 poles
-pnpm dev           # Next.js app at http://localhost:3000
-pnpm worker:dev    # Background worker (separate terminal)
-Common Tasks:
-
-pnpm typecheck / lint / build — static checks
-pnpm test / test:watch / test:coverage — Vitest
-pnpm db:studio — Prisma Studio (data browser)
-docker compose up -d — Start services (Postgres, Keycloak, dev mail)
-
-Where to Start Reading:
-
-docs/README.md — Doc index
-docs/RESUME_HERE.md — Current sprint state + next steps
-docs/ARCHITECTURE.md — System design
-docs/START_TOMORROW.md — Ready-to-run prompts for continuation
-docs/spec/ — Requirements (specs 01–08, source order: 07 > 01/06 > 03–05 > 08 > prototype)
-
-Important Notes:
-
-All domain logic in src/domain/ is pure (testable, no DB calls) — mutation testing friendly
-Readiness state machine covers 7-day grace period + recurrence rules
-27-pole seed data in prisma/seed.ts matches real SOS locations
-RBAC roles tied to Keycloak groups (not yet enforced in routes)
-Not production-ready until QA/UAT gate in docs/spec/06_DELIVERY_QA_UAT.md is passed
-Evidence traceability via requirements-traceability.csv
-
-Helpful Commands for Claude:
-
-When debugging domain logic: pnpm test --reporter=verbose
-When exploring data: pnpm db:studio
-When checking code quality: pnpm typecheck && pnpm lint && pnpm build
-To review requirements: check requirements-traceability.csv or open docs/spec/ folder
