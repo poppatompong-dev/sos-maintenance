@@ -8,6 +8,7 @@ import { ScheduleError } from '@/server/services/create-schedule-batch';
 import { BatchTransitionError } from '@/server/services/transition-schedule-batch';
 import { FieldSubmissionError } from '@/domain/checklist/canonicalize';
 import { ChecklistVersionError } from '@/server/services/checklist-version';
+import { AttachmentUploadError } from '@/server/services/upload-attachment';
 
 /** JSON response helper for route handlers. */
 export function json(body: unknown, status = 200): Response {
@@ -76,6 +77,10 @@ export function errorResponse(err: unknown): Response {
   if (err instanceof ChecklistVersionError) {
     const status =
       err.code === 'VERSION_NOT_FOUND' || err.code === 'PLAN_NOT_FOUND' ? 404 : 409;
+    return json({ error: err.code, message: err.message }, status);
+  }
+  if (err instanceof AttachmentUploadError) {
+    const status = err.code === 'PARENT_NOT_FOUND' ? 404 : 400;
     return json({ error: err.code, message: err.message }, status);
   }
   console.error('[api] unhandled error:', err);

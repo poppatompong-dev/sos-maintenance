@@ -5,6 +5,76 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-25 — Photo/evidence storage backend (ADR 0005) — infra only, no capture UI yet
+
+**FACT:** `Attachment` (schema), the storage-driver decision (ADR 0005), and
+the attachment-manifest wire contract (`mutationEnvelopeSchema.attachments`)
+all already existed but had **zero consumers** anywhere in `src/` — no
+service, no adapter, no route. This slice builds exactly what ADR 0005
+specifies, end-to-end and tested, but deliberately stops **before** any
+client-facing capture UI — see "Deliberately not done" below for why.
+
+**Built:**
+- `src/domain/attachment/index.ts` — pure validation (doc 05 §17): sniffs the
+  real image signature from bytes (JPEG/PNG/WebP magic numbers) and rejects
+  when it disagrees with the declared MIME (spoofing), rejects empty files,
+  rejects over `UPLOAD_MAX_BYTES` (`.env.example` documented 15 MiB default,
+  overridable per call). Never trusts a client-declared type alone. 8 unit
+  tests (`attachment.test.ts`).
+- `src/server/storage/{port,local-fs-port}.ts` — the ADR 0005 driver
+  interface (`put/get/delete` by opaque key) and its V1 local-filesystem
+  implementation, reading `STORAGE_LOCAL_DIR` (already documented in
+  `.env.example`, defaults to `./var/uploads`, already gitignored). Keys are
+  always server-generated (`randomUUID()` + validated extension — see below),
+  never client input; a path-containment check guards the resolved path as
+  defense in depth regardless. Swapping to S3-compatible later is a driver
+  change only, per the ADR.
+- `src/server/services/upload-attachment.ts` — validates, computes the
+  SHA-256 checksum, writes via the storage port, creates the `Attachment` row
+  tied to exactly one parent (`checklistResponseId` XOR `repairActionId` —
+  never both, never neither, 404 if the parent doesn't exist).
+- `POST /api/attachments` (multipart `file` + parent id + optional
+  `phase`) — gated on `workorder:submit` OR `repair:submit`, matching
+  whichever action created the parent record.
+- `GET /api/attachments/:id` — authorized download (ADR 0005: private,
+  served only through this route). `asset:read`-gated. The served filename is
+  derived from the attachment id, **not** the client-supplied `originalName`
+  — that string is untrusted and never belongs in a response header.
+
+**Test evidence:** `pnpm test` → **245/245** (231 baseline + 8 new pure
+validation tests + others from prior slices). New integration suite
+`src/app/api/attachments/route.itest.ts` (9 tests: 401/403/400×2/404/201×2
+covering both parent types + a full upload→download byte-for-byte round
+trip) run against a temp directory (never the real `var/uploads`), fully
+cleaned up. `pnpm test:integration` → **68 passing / 2 failing** (15 files;
+same 2 pre-existing `read-routes.itest.ts` failures as every prior entry,
+confirmed unchanged). `typecheck`/`lint`/`build` clean. DB confirmed back to
+baseline (27 assets / 2 guarded demo work orders / 0 attachments) after the
+run.
+
+**Deliberately not done this slice — and why:** no client-facing photo
+*capture* UI. Wiring one requires answering a product question I'm not
+resolving unilaterally:
+- The initial-survey checklist's photo requirement is the exact thing the
+  owner explicitly declined to strip (2026-07-24, recorded in the nav/CTA
+  honesty entry below) — *because* photo capture didn't exist yet. Now that
+  the backend does, wiring the initial-survey flow to actually use it is a
+  UX/flow decision (how capture fits into that specific checklist's
+  submission flow) that deserves the same "ask first" treatment the checklist
+  slice and the CTA decision both got, not a unilateral implementation.
+- Corrective-repair before/after photos have a backend (`repairActionId` +
+  `phase`), but `POST /api/faults/:code/repair` itself has **no UI anywhere**
+  — only the Planner-facing accept/reject read side got built (Planner
+  console v1). Building a whole technician repair-submission UI is a
+  separate, undiscussed feature, not a follow-on to "wire up photo capture."
+`requiresPhoto` (flat item-level, initial-survey) and `photoPolicy` (grouped,
+monthly v2 — still locked to `NONE` at publish, `version-lifecycle.ts`)
+remain unenforced in domain logic for the same reason: enforcing either means
+deciding which flow gets photo capture first, which is the product question
+above.
+
+---
+
 ## 2026-07-25 — QR scan wired (Technician nav slot 2 of 3)
 
 **FACT:** The Technician bottom nav's "สแกน QR" slot (spec doc 08 line 191,
