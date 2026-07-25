@@ -6,8 +6,9 @@
 
 _Always-current pointer. Read this first when you sit down at a machine._
 _Last updated: 2026-07-24 (flexible field checklist **implemented** AND GPS
->100m mandatory reason **implemented, closing UAT case 8**; QA/UAT gate as a
-whole still NOT closed — do not claim production-ready)._
+>100m mandatory reason **implemented, closing UAT case 8**, AND dashboard
+nav/CTA **honesty fix implemented**; QA/UAT gate as a whole still NOT
+closed — do not claim production-ready)._
 
 ## ▶ Next: security boundary + Neon credential rotation (need the account owner)
 Both open engineering slices from the prior handoff are now done: the flexible
@@ -33,6 +34,23 @@ recorded (see "Next steps" below).
 ## Where we are
 - **Sprint 1 (Foundation)** ✅ · **Sprint 2 (Domain layer)** ✅ · **Sprint 3 (UI + PWA)** ✅ · **Sprint 4–6 wiring** ✅ · **Flexible field checklist (grouped monthly v2)** ✅ · **GPS >100m mandatory reason (UAT case 8)** ✅ — implementation is in the working tree and pushed, the DB-backed integration gate is green (apart from 2 pre-existing, unrelated local-seed-state failures — see below).
 - **Tests:** `pnpm test` → **231 passing** (26 files). Locally, DB-backed integration → **50 passing / 2 failing (11 files)** — the 2 failures are `src/app/api/read-routes.itest.ts` asserting an empty "fresh seed" against a local DB that permanently carries the guarded demo fixtures (stale local state, not a regression; unchanged since the checklist slice, unrelated to GPS wiring). `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` are green. CI was last confirmed fully green on Actions run [`30086016629`](https://github.com/poppatompong-dev/sos-maintenance/actions/runs/30086016629) (checklist slice, commit `8727436`) — re-confirm CI on the GPS-wiring commits before relying on this line. (Prior CI-green baseline before the checklist slice: 167 unit + 41/41 integration, Actions run 29977349490, commit `8ae02f9`.)
+- **Dashboard nav/CTA honesty fix — DONE (commit `efba3c3`).** `AppRail` and the
+  `/today` bottom nav previously rendered every item as a dead `href="#"`, and
+  "active" was hardcoded per item rather than derived from the real route (so
+  "ภาพรวม" showed active even on `/work-orders`/asset-detail pages). Fixed:
+  real hrefs for destinations that exist (`/`, `/work-orders`, `/today`) with
+  `aria-current` computed per page; items with no destination yet (map,
+  calendar, reports, QR scan, "งานของฉัน", "แจ้งเตือน") render **disabled**
+  with a "เร็วๆ นี้" label — never a silent no-op. The dashboard's
+  "เริ่มสำรวจตั้งต้น" CTA is also now honestly disabled: the initial-survey
+  checklist is photo-evidence by nature (5 of its 13 items require a photo,
+  `prisma/seed.ts` `INITIAL_SURVEY`), photo capture doesn't exist yet, and the
+  owner explicitly chose (2026-07-24) **not** to strip that requirement the
+  way the checklist slice did for the monthly checklist's one photo item
+  (`m_exterior`) — so the button must not pretend a survey can be completed.
+  This is a UI-honesty fix only; it does not touch schema, domain, or APIs.
+  `pnpm test` 231/231 unchanged, typecheck/lint/build clean, verified live
+  against the running dev server.
 - **GPS >100m mandatory reason — DONE, see `docs/WORKLOG.md` 2026-07-24 entry for full detail.** `submitInspection` now rejects (`GPS_REASON_REQUIRED`, 400) a >100m capture with no non-blank reason, before persisting anything; a reason is persisted to `ChecklistResponse.locationReason` alongside the existing `distanceMeters`/`locationException`/`reviewFlag`; `/today` reveals a required reason field client-side as UX guidance once GPS is captured, but the server remains authoritative. Live-server end-to-end proof (throwaway fixture, cleaned up, guarded demo untouched): no reason → 400; with reason → 201 + persisted evidence with `reviewFlag`/`locationException` both `true`. **This closes UAT case 8** (`docs/spec/06`).
 - **Local Docker Desktop + PostGIS is now healthy on this machine**, so hands-on `/today` workflow UAT ran against a real local DB. Do **not** fabricate production work orders — the demo fixture is guarded, local-`sos`-only, and fail-closed.
 - **Flexible field checklist — DONE, see `docs/WORKLOG.md` 2026-07-24 entry for full detail.** Monthly checklist v2 (5 Thai outcome-oriented groups + 1 optional note) is now the active definition (`pnpm db:checklist:v2`, chained into `pnpm db:setup`); legacy v1 stays frozen/untouched and renders a Thai reissue advisory. Server-side canonicalization (`src/domain/checklist/canonicalize.ts`) means the client can no longer supply criticality/function keys. Browser-verified end-to-end on `http://localhost:3100/today` against the new `DEMO-LOCAL-EP01-MONTHLY-V2` demo: card render → `เริ่มงาน` (200) → all 5 groups `ปกติ` → submit → `POST /api/inspections` 201 → `SUBMITTED`, no console errors, no PASS/FAIL/enum leakage in the accessibility tree. DB evidence: 10 `ChecklistResponse` rows under 1 `clientMutationId`, 1 fresh `ReadinessSnapshot` (status `UNKNOWN`/`NO_APPROVED_BASELINE` — expected, unrelated to this slice: EP01's baseline was never approved). **This slice does NOT close UAT #3/#4/#8** — see the WORKLOG entry for exactly what it does and doesn't prove.
@@ -79,9 +97,14 @@ Vercel URL's network boundary and Neon credential rotation, both below.
    local-`sos`-only ASSIGNED demo work order. Never writes to production/Neon.
    See `docs/DEMO_RUNBOOK.md`.
 2. ~~**Workflow UAT (happy path)**~~ — **DONE** for start → checklist/GPS → submit
-   → `SUBMITTED`, verified in-browser on the local DB. Still remaining in this
-   area: wire dashboard actions to real inspection/sync/fault/work-order flows,
-   plus offline queue / QR / photo.
+   → `SUBMITTED`, verified in-browser on the local DB. ~~Dashboard nav/CTA
+   honesty~~ — **DONE (2026-07-24)**, see above. Still remaining in this area:
+   a real Planner console (schedule-batch create/publish, WO transitions,
+   fault repair-accept — none of it has a UI today, only APIs), offline
+   queue, QR scan, and photo capture. The initial-survey checklist
+   deliberately stays un-groupified and its CTA disabled until photo capture
+   exists (owner decision, 2026-07-24) — do not "fix" it by stripping its
+   photo requirements without asking first.
 3. ~~**Flexible field checklist**~~ — **DONE (2026-07-24).** All 16 tasks of
    [`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`](superpowers/plans/2026-07-23-flexible-field-checklist.md)
    executed test-first in small vertical commits. Monthly field inspection is now

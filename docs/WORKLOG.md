@@ -5,6 +5,52 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-24 — Dashboard nav/CTA honesty fix (no dead links, no fake active state)
+
+**FACT:** `AppRail` (used on `/`, `/work-orders`, `/assets/[code]`) and the
+`/today` bottom nav rendered every item as `href="#"` — a silent no-op click —
+and "active" was a hardcoded flag per nav item rather than derived from the
+real route, so "ภาพรวม" showed as the active/highlighted item even while on
+`/work-orders` or an asset-detail page. Fixed in commit `efba3c3`:
+
+- `src/components/AppRail.tsx` now takes a `current` prop from the page that
+  renders it and computes `aria-current` for real; items with a real
+  destination (`/`, `/work-orders`) render as `next/link`; items with no
+  destination yet (แผนที่, ปฏิทิน, รายงาน) render as a disabled `<span>` with
+  `aria-disabled` and a "เร็วๆ นี้" title — never a clickable no-op.
+- `src/app/today/page.tsx` bottom nav gets the same treatment (`/today` real;
+  สแกน QR / งานของฉัน / แจ้งเตือน disabled).
+- Dashboard bell button: `disabled` + `aria-disabled`, no more decorative
+  fake-interactive styling.
+- Dashboard "เริ่มสำรวจตั้งต้น" CTA: converted from a dead link to a
+  `disabled` button with an honest reason surfaced in the UI copy. **Decision
+  point, asked and answered by the owner this session:** the initial-survey
+  checklist (`prisma/seed.ts` `INITIAL_SURVEY`) has 5 of 13 items marked
+  `requiresPhoto: true` — it is fundamentally photo-evidence. Photo capture is
+  still out of scope. The checklist slice had already set one precedent for
+  this exact tension (stripping the photo requirement on the monthly
+  checklist's single `m_exterior` item, explicitly and non-silently). Applying
+  that same move here would gut 5 of 13 items, not 1 — the owner chose **not**
+  to do that. The survey checklist stays un-groupified and un-completable
+  until photo capture exists; the CTA now says so instead of pretending to
+  work. Do not revisit this by quietly disabling the photo requirement — ask
+  first, same as this session did.
+
+**Test evidence:** `pnpm test` 231/231 (unchanged — no domain/service/test
+file touched), `pnpm typecheck` / `pnpm lint` / `pnpm build` / `git diff
+--check` all clean. Verified live against the already-running local dev
+server: `/` shows the disabled states with the correct Thai copy; `/work-orders`
+and `/assets/EP01` each show exactly the correct single (or zero) `aria-current`
+— confirming the stale hardcoded-active bug is gone.
+
+**Scope note:** this is a UI-honesty fix only. It does **not** build the
+Planner console (schedule-batch create/publish, WO transitions, fault
+repair-accept have APIs but no UI anywhere), the offline queue, QR scan, or
+photo capture — all deliberately deferred this session (owner decision) to
+keep this slice small and bounded rather than open-ended.
+
+---
+
 ## 2026-07-24 — GPS >100m mandatory reason wired (UAT case 8 closed)
 
 **FACT:** Wired the GPS `>100 m` mandatory-reason rule end to end, domain-first
