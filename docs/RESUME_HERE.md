@@ -8,21 +8,114 @@ _Always-current pointer. Read this first when you sit down at a machine._
 _Last updated: 2026-07-25, evening — **both remaining release-blockers are now
 CLOSED**: the public Vercel URL is gated behind `SITE_ACCESS_PASSWORD`
 (HTTP Basic Auth, `src/proxy.ts`) and the Neon production DB credential has
-been rotated, both confirmed working live in production. QA/UAT gate as a
-formal process still NOT run — do not claim production-ready until
-`docs/spec/06_DELIVERY_QA_UAT.md` is actually completed (see "▶ Next")._
+been rotated, both confirmed working live in production. Session paused here
+for the day; a same-day audit against `docs/spec/06_DELIVERY_QA_UAT.md`'s 11
+mandatory UAT cases is written up in "▶ Next" below as tomorrow's starting
+point — it found 4 concrete engineering gaps (baseline approval, email
+transport, scheduled readiness recompute, reports/PDF/Excel) plus the
+already-known photo-capture UI. QA/UAT gate as a formal process still NOT
+run — do not claim production-ready until it's actually completed._
 
-## ▶ Next: run the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate
+## ▶ Next: honest gap-audit against `docs/spec/06_DELIVERY_QA_UAT.md`, then an owner scope decision
 Every remaining engineering item and every release-blocker from prior
 sessions is now done: the flexible grouped checklist, the GPS >100m mandatory
 reason (UAT case 8), the dashboard nav/CTA honesty fix, the Planner console
 v1, QR scan, the photo/evidence storage backend, the offline mutation queue,
 the real technician picker, and — as of this session — the shared-password
 gate **and** the Neon credential rotation, both live and verified in
-production. What remains is either **not code** (client photo-capture UI —
-see "Blocked, not missing" below) or **process, not implementation** (the
-formal QA/UAT gate itself, which has never actually been run end-to-end as a
-documented gate — see `docs/spec/06_DELIVERY_QA_UAT.md`).
+production.
+
+**Do NOT start by writing code tomorrow.** The formal QA/UAT gate has never
+actually been run end-to-end, and a same-day check of the 11 mandatory UAT
+cases in `docs/spec/06_DELIVERY_QA_UAT.md` against the real code (done this
+session, findings below) shows **several cases depend on features that don't
+exist yet** — some small, one large. Building blind against a stale
+`requirements-traceability.csv` (last touched around Sprint 3–4, doesn't even
+mention Planner console v1/QR/storage/offline-queue/technician-picker/security
+-gate/Neon-rotation) would repeat the exact scope-creep mistake this project
+has deliberately avoided elsewhere (see the photo-capture-UI and
+technician-picker precedents). **Step 1 tomorrow: refresh
+`requirements-traceability.csv` and present the honest picture below to the
+owner for a scope decision before implementing anything.**
+
+**Case-by-case audit against `docs/spec/06`'s 11 mandatory UAT cases
+(checked against real code this session — trust this over
+`requirements-traceability.csv`, which is stale):**
+
+1. **27 assets + baseline approval** — 27 assets: done. **Baseline approval
+   has no real workflow at all** — `Asset.baselineApproved` is read
+   everywhere (readiness engine, queries) but there is no endpoint/UI that
+   ever sets it true; only seed/demo fixtures touch it directly. **Gap: a
+   baseline-approval feature doesn't exist.**
+2. **auto draft → edit/publish → assignment** — schedule-batch
+   create/approve/publish + WO `ASSIGNED` with the real technician picker
+   are built (Planner console v1). Likely satisfiable, but verify
+   specifically whether "auto draft" means a plan's recurrence should
+   *automatically* generate the next batch/WO, or whether a Planner manually
+   triggering creation counts — re-read spec docs 01/06 before assuming.
+3. **QR/GPS/photo/pass → READY** — QR: done. GPS: done. **Photo capture UI
+   still doesn't exist** (the owner picked the UX flow 2026-07-25 — see
+   "Blocked, not missing" below — it's now an implementation gap, not a
+   pending decision). The monthly checklist's one photo item was
+   deliberately stripped, so monthly can reach READY without it, but the
+   full photo-evidence path (initial survey) is unproven. **Gap: photo
+   capture UI.**
+4. **critical fail → DOWN + Fault + WO + email** — DOWN + Fault + corrective
+   WO: done at the domain level (tested). **Email is not wired at all** —
+   `src/server/services/run-job-tick.ts` explicitly defers EMAIL-channel
+   notifications ("no transport wired yet → leave PENDING"); no Nodemailer
+   transport exists despite being in the documented tech stack. **Gap: SMTP
+   email transport.**
+5. **repair/retest → Planner accept → READY** — fault repair-accept UI is
+   built (Planner console v1). Likely satisfiable; confirm with a live
+   retest→READY run, not just code presence.
+6. **overdue → WATCH → after 7 days UNKNOWN** — the domain rule itself
+   (7-day grace, precedence) is correct and unit-tested. **But nothing
+   automatically re-evaluates readiness on a schedule** —
+   `run-job-tick.ts`'s "readiness reconciliation" only counts assets in scope
+   for observability, it doesn't recompute; readiness currently only
+   updates reactively when a new inspection/event happens. An asset that
+   just goes quiet won't automatically flip WATCH→UNKNOWN in production
+   today. **Gap: a scheduled readiness-recompute job** (the code comments
+   already point at Vercel Cron as the intended trigger).
+7. **offline close/reopen → sync once, no duplicate** — the offline mutation
+   queue (this session) is idempotent via `clientMutationId` and was
+   live-verified once end-to-end. Reasonably solid.
+8. **GPS >100m reason + review flag** — **done**, closes this case.
+9. **Executive read/export cannot mutate** — read-only RBAC for EXECUTIVE is
+   policy-tested. The "export" half has nothing to verify against yet — see
+   #10.
+10. **Dashboard/PDF/Excel match same filter** — **no PDF/Excel exists at
+    all** (confirmed: no Playwright/ExcelJS usage anywhere in `src/`).
+    Metrics share one definition (`src/domain/metrics`) so the *data* side is
+    ready, but there is no report-generation feature to test. **This is the
+    single largest remaining gap** — likely deserves its own design + plan
+    document the way the flexible-checklist feature got one
+    (`docs/superpowers/plans/2026-07-23-flexible-field-checklist.md` as the
+    template), not a quick slice.
+11. **Cutover: 27 with no missing baseline/status** — this needs real
+    baseline approvals (#1) *and* real field surveys of all 27 physical
+    poles. **This is an operational/business milestone, not an engineering
+    task** — no amount of coding closes it; it happens after go-live
+    readiness, on the municipality's own timeline. Don't try to "complete"
+    it in a coding session.
+
+**Recommended shape for tomorrow, in order:**
+1. Refresh `requirements-traceability.csv` against the audit above (mechanical,
+   ~30–60 min) — this is the artifact the spec itself says gates closure
+   ("ห้ามปิด requirement ไม่มี evidence").
+2. Bring the owner the honest picture: 4 solid gaps identified (baseline
+   approval, email transport, scheduled readiness recompute, reports
+   PDF/Excel) plus the photo-capture UI already agreed. Ask explicitly:
+   build all of it before any release claim, or agree a smaller v1 scope
+   with the rest recorded as known limitations? **Do not decide this
+   unilaterally** — same precedent as every other scope call this project
+   has deferred to the owner.
+3. Only after that decision, sequence the agreed slices — likely smallest
+   first (baseline approval is probably a small, contained feature; the
+   scheduled recompute job may already have most of its plumbing in
+   `run-job-tick.ts`; email transport is a moderate Nodemailer wiring job;
+   reports is the multi-session one).
 
 **Security-boundary closure, 2026-07-25 evening — final state, verified live:**
 - `src/proxy.ts` (HTTP Basic Auth gate) pushed and deployed (`f938d9c` →
