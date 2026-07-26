@@ -3230,7 +3230,7 @@ pnpm db:seed:demo   # one ASSIGNED DEMO-LOCAL-EP01-MONTHLY-V2 pinning the groupe
 
 Expected: `db:seed:demo` prints `... DEMO-LOCAL-EP01-MONTHLY-V2 on EP01 is ASSIGNED (created).`
 
-- [ ] **Step 2: Mock geolocation at EP01 (keeps the out-of-scope GPS>100m path out of this slice)** — start the app on port **3100** (port 3000 belongs to the unrelated `thai-memo-app` and must not be touched): `pnpm dev -- -p 3100`, open `http://localhost:3100/today`, then in the automation context:
+- [ ] **Step 2: Mock geolocation at EP01 (keeps the out-of-scope GPS>100m path out of this slice)** — start the app on port **3100** (port 3000 belongs to the unrelated `thai-memo-app` and must not be touched): `pnpm dev -p 3100` — *corrected 2026-07-26: this line originally said `pnpm dev -- -p 3100`, which fails with `Invalid project directory provided`; do not copy the `--` form out of this archived plan* — open `http://localhost:3100/today`, then in the automation context:
 
 ```js
 const boot = await fetch('/api/sync/bootstrap', { cache: 'no-store' }).then((r) => r.json());

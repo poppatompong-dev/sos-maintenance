@@ -27,7 +27,10 @@ Municipality). The core question it answers for executives: *which poles are
 
 ## Current state
 See `docs/RESUME_HERE.md` — kept current every session; do not rely on a
-hardcoded snapshot here, it goes stale immediately.
+hardcoded snapshot here, it goes stale immediately. The one deliberate
+exception is the dated pointer under "What to work on next" below, which exists
+so a session knows what to do without a second file read — it is explicitly
+marked as a snapshot and must be updated when the next slice changes.
 
 ## Rules you MUST follow (from the spec — non-negotiable)
 - **Language:** Thai UI, consistent vocabulary — พร้อมใช้ / เฝ้าระวัง / ใช้งานไม่ได้ /
@@ -55,21 +58,77 @@ hardcoded snapshot here, it goes stale immediately.
 2. Work in **small vertical slices**; keep `pnpm test && pnpm typecheck &&
    pnpm lint && pnpm build` green.
 3. **Update `docs/WORKLOG.md`** (and `docs/RESUME_HERE.md` if the next step
-   changes) as you go.
+   changes) as you go. When a slice finishes, also update
+   `requirements-traceability.csv` with **observed** evidence, and refresh the
+   dated "What to work on next" pointer at the bottom of this file. Stale
+   onboarding docs are a recurring hazard here — on 2026-07-26 three separate
+   files were still instructing the next session to redo finished work or run a
+   command that fails.
 4. `git add -A && git commit -m "..." && git push` at the end. Pushing is
    essential — it's how the work reaches the user's other machine.
    Commit trailer: `Co-Authored-By: Claude <noreply@anthropic.com>`.
 5. Screenshots in the in-app browser pane may time out — verify UI with
    `read_page` (a11y tree) + a JS probe for computed styles/contrast instead.
 
-## Commands
+## Start of session — copy/paste
+
+```powershell
+git pull                       # always first: the user develops home ↔ office
+pnpm install                   # only if deps changed
+pnpm test                      # unit — needs no Docker, no env vars
 ```
-pnpm test:integration   # DB-backed tests, need local sos PostGIS
-pnpm db:migrate | pnpm db:postgis | pnpm db:seed   # need Docker running
-pnpm db:seed:demo   # guarded local-only demo work order (see docs/DEMO_RUNBOOK.md)
+
+**Anything that touches the database** (`pnpm dev` with real data,
+`pnpm test:integration`, `pnpm db:*`) additionally needs Docker up **and** the
+env vars set **in the same shell** — there is no `.env` file in this tree:
+
+```powershell
+docker compose up -d postgres  # wait until healthy (~15-30s)
+$env:DATABASE_URL = "postgresql://sos:sos@localhost:5432/sos?schema=public"
+$env:AUTH_MODE = "internal"    # needed for /today and for write APIs
+pnpm dev -p 3100               # http://localhost:3100
 ```
-Everything else (`pnpm dev`, `test`, `typecheck`, `lint`, `build`, `worker:dev`,
-etc.) is a standard script — see `package.json`.
+
+**Three ways to get this wrong — all have cost time already:**
+- ❌ `pnpm dev -- -p 3100` — the `--` is passed through as a positional arg and
+  the server dies with `Invalid project directory provided, no such directory:
+  ...\-p`. Write `pnpm dev -p 3100`.
+- ❌ Port **3000** is the unrelated `thai-memo-app`. **Never touch it.** This
+  app is 3100 only.
+- ❌ `docker compose down -v` would destroy the named volumes. **Never run it.**
+  To stop cleanly use `docker compose stop postgres`.
+
+## Other commands
+```
+pnpm test:integration   # DB-backed tests, need local sos PostGIS (see above)
+pnpm db:setup           # migrate + postgis + seed (fresh database)
+pnpm db:migrate | pnpm db:postgis | pnpm db:seed
+pnpm db:seed:demo       # guarded local-only demo work order (docs/DEMO_RUNBOOK.md)
+```
+Everything else (`typecheck`, `lint`, `build`, `worker:dev`, etc.) is a standard
+script — see `package.json`.
+
+## What to work on next
+
+**Snapshot — 2026-07-26. `docs/RESUME_HERE.md` wins if these disagree; go read
+it, and update the line below whenever the next slice changes.**
+
+The owner decided on 2026-07-26 to build **all 5 remaining gaps** before any
+"พร้อมใช้งานจริง" claim. Gap 1 (`ASSET-06` baseline approval) is done.
+
+> **Next slice: `RDY-06` — scheduled readiness recompute.** A pole that simply
+> goes quiet never flips เฝ้าระวัง → ยังไม่ทราบ today; readiness only updates
+> when new evidence arrives. The daily cron already exists in `vercel.json`
+> (`/api/jobs/tick`) and the per-asset fact loader already exists in
+> `src/server/adapters/prisma-baseline-port.ts` — **reuse it, do not write a
+> second copy.** The missing piece is the recompute inside
+> `src/server/services/run-job-tick.ts`, which currently only counts assets in
+> scope. **Ask the owner before coding:** write a `ReadinessSnapshot` every run,
+> or only when the status actually changes? See `docs/DEVELOPMENT_GUIDE.md` §9.
+
+Then: `OPS-05` email transport · `UI-03` photo capture UI · `RPT-02` PDF/Excel
+reports · finally `QA-01`, the formal `docs/spec/06` gate, which has **never**
+been run — nothing is production-ready until it has.
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
