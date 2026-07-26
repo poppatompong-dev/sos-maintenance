@@ -5,6 +5,79 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-26 — Baseline approval (`ASSET-06`) — first of the 5 agreed gaps
+
+**Why this one first:** it is the smallest of the five and it unblocks the
+most. `Asset.baselineApproved` was read by the readiness engine and by every
+query, but nothing in the product ever wrote it — so every pole was
+permanently UNKNOWN/`NO_APPROVED_BASELINE` by construction. It also gates
+UAT cases 1 and 11.
+
+**The design was already half-specified in the repo**, which settled the
+shape without guesswork: spec 08 describes the flow as Admin/Planner reviewing
+the registry → Initial Survey performed → baseline approved, the RBAC policy
+already reserved `survey:submit` (technician) / `survey:approve` (planner) with
+no consumer, the Prisma schema already had `baselineApprovedAt` /
+`baselineApproverId` / a `BaselineApprover` relation, and `ReadinessTrigger`
+already had a `BASELINE_APPROVED` value. **No migration was needed.**
+
+**Rule (`src/domain/asset/baseline.ts`, pure, 14 tests):** only
+PLANNER/SYSTEM_ADMIN; evidence is mandatory — an INITIAL_SURVEY work order in
+`CLOSED`, since SUBMITTED has not been reviewed and REJECTED is not evidence
+of anything; separation of duties, where an **unknown** submitter fails closed
+rather than silently passing; once-only; never on a retired asset. Every
+denial carries a Thai message, never a bare enum.
+
+**Service (14 tests):** authorizes before loading anything, then recomputes
+readiness with `baselineApproved: true` and hands the result to the port so the
+immutable snapshot is written in the same act. Tests pin the thing that
+matters: **approval does not force READY.** A FAIL still computes DOWN; a
+missing critical result still computes UNKNOWN — only the
+`NO_APPROVED_BASELINE` reason disappears.
+
+**Adapter:** rebuilds readiness facts from real rows — latest PASS/FAIL per
+required critical function (read from the asset's flagged-critical components,
+per doc 07, not a hard-coded list), open critical/non-critical faults, next due
+date. An `NA` response is treated as UNKNOWN, never as a quiet pass. Persists
+in one transaction with `updateMany` guarded on **both** the expected version
+and `baselineApproved: false`, so a concurrent double-approval loses instead of
+double-writing.
+
+**API/UI:** `POST /api/assets/:code/baseline-approval` (no body — the approval
+carries no operator choices), refusals → 409, unknown asset → 404. The asset
+detail page gets a `ผลสำรวจตั้งต้น` card that shows the approver and Thai date
+once approved, and otherwise **explains what is missing** rather than offering
+a button the server would reject.
+
+**Evidence — `route.itest.ts`, 9 tests against local Postgres:** 401 no
+session · 403 technician · 403 executive · 404 unknown asset · 409
+`SURVEY_MISSING` · 409 `SURVEY_NOT_ACCEPTED` (and the asset verifiably
+untouched afterwards) · 409 `SELF_APPROVAL` · 200 writing
+`baselineApprovedAt`/`baselineApproverId` plus **exactly one**
+`BASELINE_APPROVED` snapshot whose stored status is the computed `UNKNOWN`
+with `NO_APPROVED_BASELINE` gone · 409 `ALREADY_APPROVED` on a second attempt
+with still only one snapshot.
+
+**Full gate:** `pnpm test` 283/283 (30 files) · integration **78 passing / 2
+failing (16 files)** — the 2 failures are the known pre-existing
+`read-routes.itest.ts` ones (EP01 carries a readiness snapshot from
+2026-07-24 and the local DB holds 2 guarded demo work orders, so its "fresh
+seed" assertions can't hold on this machine); confirmed unrelated by reading
+the actual assertion failures. `typecheck`, `lint`, `build` clean; the new
+route appears in the build output.
+
+**Caught by typecheck, worth remembering:** the first draft of the service
+test used `{ functionKey, passed }` for `CriticalCheckResult` when the real
+shape is `{ key, label, result }`. Vitest passed anyway — the engine simply
+saw no PASS/FAIL and fell through. `pnpm typecheck` is what caught it. A green
+`pnpm test` alone would have shipped two tests that asserted nothing.
+
+**Not done:** the UI panel has not been exercised in a real browser yet, and
+`requiresPhoto` is still not enforced server-side anywhere (a survey can be
+submitted without its photos today) — that belongs with `UI-03`, not here.
+
+---
+
 ## 2026-07-26 — `requirements-traceability.csv` refreshed against the real code
 
 **Why:** `docs/spec/06_DELIVERY_QA_UAT.md` names this file as the gate artifact

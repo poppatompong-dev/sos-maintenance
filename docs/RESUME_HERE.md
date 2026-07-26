@@ -6,12 +6,15 @@
 
 _Always-current pointer. Read this first when you sit down at a machine._
 _Last updated: 2026-07-26 — **the owner has made the scope decision: build all
-5 remaining gaps before any release claim.** `requirements-traceability.csv` has
-been refreshed against the real code (32 → 48 rows, new `uat_case` column,
-21 DONE / 19 PARTIAL / 8 NOT_STARTED) — it is now trustworthy and is the
-artifact `docs/spec/06` says gates closure. Both prior release-blockers stay
-closed (password gate + Neon rotation, live and verified). QA/UAT gate as a
-formal process still NOT run — do not claim production-ready until it is._
+5 remaining gaps before any release claim**, and the **first one is done**:
+baseline approval (`ASSET-06`) ships domain rule + service + adapter + API +
+UI, proven by 9 integration tests against real Postgres.
+`requirements-traceability.csv` was refreshed against the real code the same
+day (32 → 48 rows, new `uat_case` column, now 22 DONE / 19 PARTIAL /
+7 NOT_STARTED) — it is trustworthy and is the artifact `docs/spec/06` says
+gates closure. Both prior release-blockers stay closed (password gate + Neon
+rotation, live and verified). QA/UAT gate as a formal process still NOT run —
+do not claim production-ready until it is._
 
 ## ▶ Next: build the 5 agreed gaps, smallest first
 
@@ -22,11 +25,20 @@ first):
 
 | Order | Gap | Requirement ID | UAT case | Notes |
 |---|---|---|---|---|
-| 1 | **Baseline approval workflow** | `ASSET-06` | 1, 11 | Small and contained. `Asset.baselineApproved` is already read by the readiness engine and every query — nothing writes it. Unblocks cutover (`CUT-01`). Start here. |
+| ~~1~~ | ~~**Baseline approval workflow**~~ | `ASSET-06` | 1, 11 | ✅ **DONE 2026-07-26** (`e39a6e8` + `5c1b15e`). Domain rule + service + Prisma adapter + `POST /api/assets/:code/baseline-approval` + asset-detail UI panel. 14+14 unit tests, 9 integration tests against real Postgres. See the `docs/WORKLOG.md` 2026-07-26 entry. **Still to do:** exercise the UI panel in a real browser. |
 | 2 | **Scheduled readiness recompute** | `RDY-06` | 6 | The trigger already exists — `vercel.json` runs a daily cron on `/api/jobs/tick`. The gap is only the recompute logic inside `run-job-tick.ts` (today it just counts assets in scope). |
 | 3 | **SMTP email transport** | `OPS-05` | 4 | Moderate Nodemailer wiring. EMAIL notifications are deliberately left `PENDING` today, never dropped — so the queue side is already correct. |
 | 4 | **Photo capture UI** | `UI-03` | 3 | Storage backend done (`SEC-03`). Owner already chose the initial-survey checklist as the first home for it (2026-07-25). `QrScanner.tsx`'s `getUserMedia` is the nearest precedent — confirm the exact UX shape before building. |
 | 5 | **Reports PDF / Excel** | `RPT-02` | 9, 10 | Multi-session. Deserves its own plan doc (use `docs/superpowers/plans/2026-07-23-flexible-field-checklist.md` as the template) before any code. Metrics already share one definition (`src/domain/metrics`), so the data side is ready. |
+
+**Next up: `RDY-06` scheduled readiness recompute** (row 2 of the table). The
+daily Vercel cron on `/api/jobs/tick` already exists — the missing piece is the
+recompute itself inside `src/server/services/run-job-tick.ts`, which today only
+counts assets in scope. `src/server/adapters/prisma-baseline-port.ts` (built
+2026-07-26) already contains the "rebuild readiness facts for one asset from
+real rows" logic — latest PASS/FAIL per critical function, open faults, next
+due date. **Reuse it rather than writing a second version**; lifting it into a
+shared loader is probably the first task of that slice.
 
 After all five: run the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate
 end-to-end (`QA-01`), recording the `AUTH_MODE=internal` exception as part of
