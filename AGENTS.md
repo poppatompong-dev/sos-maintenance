@@ -12,13 +12,18 @@ Municipality). The core question it answers for executives: *which poles are
 
 ## Read these first, in this order
 1. **`docs/RESUME_HERE.md`** — current state + the ordered next steps. START HERE.
-2. **`docs/WORKLOG.md`** — chronological history + why each decision was made.
-3. **`docs/ARCHITECTURE.md`** — how the code is organised (layers, modules, the
+2. **`docs/DEVELOPMENT_GUIDE.md`** — how to actually build a slice here: the
+   non-negotiable principles and *why*, a fully worked example across every
+   layer, the testing strategy (and why a green suite is not enough), the traps
+   that have already cost time, the definition of done, and the specific
+   starting point for each remaining gap. **Read before writing code.**
+3. **`docs/WORKLOG.md`** — chronological history + why each decision was made.
+4. **`docs/ARCHITECTURE.md`** — how the code is organised (layers, modules, the
    readiness pipeline, ports/adapters).
-4. **`docs/spec/`** — the original requirements pack (01–09). Source-of-truth
+5. **`docs/spec/`** — the original requirements pack (01–09). Source-of-truth
    order when things conflict: `spec/07` > `spec/01` & `spec/06` > `spec/03–05` >
    `spec/08` > prototype.
-5. `docs/README.md` is the full index of all documentation.
+6. `docs/README.md` is the full index of all documentation.
 
 ## Current state
 See `docs/RESUME_HERE.md` — kept current every session; do not rely on a

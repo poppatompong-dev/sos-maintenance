@@ -145,10 +145,12 @@ interface InspectionPort {
 }
 ```
 
-Today the tests supply an in-memory adapter. **Sprint 4 = write the Prisma
-adapter** for this interface (and point `queries/readiness-overview.ts` at the DB
-instead of the seed registry). No domain or service code changes — that's the
-payoff of the layering.
+Tests supply an in-memory adapter; production supplies a Prisma one. Both were
+written long ago — `src/server/adapters/` now holds six of them
+(`prisma-inspection-port`, `-work-order-port`, `-schedule-port`, `-repair-port`,
+`-job-tick-port`, `-baseline-port`), and `queries/readiness-overview.ts` reads
+the DB with a seed fallback when it is unreachable. Adding an adapter has never
+required a domain or service change — that is the payoff of the layering.
 
 ## Reliability patterns (already in the schema/domain)
 
@@ -166,6 +168,18 @@ payoff of the layering.
 1. Pure rule? → add to `src/domain/<module>` **with tests first** (it needs no DB).
 2. Needs data? → define/extend a **port**, add a Zod DTO, write a **service** that
    composes domain + port. Test with an in-memory adapter.
-3. Persistence → implement the port with Prisma in `src/server`.
-4. UI → server component in `src/app` calling a `query`/service; reuse components.
-5. `pnpm test && pnpm typecheck && pnpm lint && pnpm build`, then commit + push.
+3. Persistence → implement the port with Prisma in `src/server/adapters`.
+4. API route → thin: auth → parse → call service → `errorResponse`. Register any
+   new error class in `src/server/http/respond.ts` or it becomes a 500.
+5. UI → server component in `src/app` calling a `query`/service; reuse components.
+6. Integration test next to the route (`*.itest.ts`) covering refusals, not just
+   the happy path.
+7. **Run it in the real app**, with a throwaway fixture you then delete.
+8. `pnpm test && pnpm typecheck && pnpm lint && pnpm build`, update
+   `requirements-traceability.csv` + `docs/WORKLOG.md`, then commit + push.
+
+> **This is the summary. The detailed version — with a fully worked example
+> (`ASSET-06`), the conventions each step must follow, the traps that have
+> already cost time, and the definition of done — is in
+> [`DEVELOPMENT_GUIDE.md`](DEVELOPMENT_GUIDE.md). Read that before your first
+> slice.**

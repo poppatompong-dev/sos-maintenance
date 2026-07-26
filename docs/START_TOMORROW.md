@@ -19,8 +19,12 @@
 ## เอกสารที่ต้องอ่านก่อนลงมือ (ตามลำดับ)
 1. `AGENTS.md` (กติกาโปรเจกต์ที่บังคับใช้)
 2. `docs/RESUME_HERE.md` (สถานะปัจจุบัน + ลำดับงานถัดไป) — **แหล่งความจริงหลัก**
-3. `docs/WORKLOG.md` (ประวัติ + เหตุผลการตัดสินใจ อ่าน entry 2026-07-26 สองอันบนสุด)
-4. `requirements-traceability.csv` (requirement ไหนเสร็จ/ไม่เสร็จ พร้อมหลักฐาน)
+3. **`docs/DEVELOPMENT_GUIDE.md`** (วิธีลงมือทำ slice ให้ถูกแบบของโปรเจกต์นี้ —
+   หลักการที่ห้ามแหกพร้อมเหตุผล, ตัวอย่างจริงครบทุกชั้น, กลยุทธ์การทดสอบ,
+   กับดักที่เคยเสียเวลามาแล้ว, เกณฑ์ "เสร็จ", จุดเริ่มของงานที่เหลือ)
+   **อ่านก่อนเขียนโค้ด**
+4. `docs/WORKLOG.md` (ประวัติ + เหตุผลการตัดสินใจ อ่าน entry 2026-07-26 สองอันบนสุด)
+5. `requirements-traceability.csv` (requirement ไหนเสร็จ/ไม่เสร็จ พร้อมหลักฐาน)
 
 > **หมายเหตุ:** flexible field checklist (`docs/superpowers/plans/2026-07-23-…`)
 > **ทำเสร็จไปแล้วตั้งแต่ 2026-07-24** — เอกสารนั้นเก็บไว้เป็นประวัติและเป็น
@@ -54,6 +58,7 @@ git add -A && git commit -m "..." && git push   # ★ ก่อนเลิก/�
 1. cd D:\sos-maintenance แล้ว `git pull` ก่อนเป็นอย่างแรก
 2. ยืนยัน checkpoint สะอาดและ sync แล้ว: `git status --short` ต้องไม่มีอะไรค้าง และ branch main ตรงกับ origin/main
 3. อ่านให้ครบก่อนแตะโค้ด: AGENTS.md, docs/RESUME_HERE.md (ตาราง "5 จุด"),
+   docs/DEVELOPMENT_GUIDE.md (สำคัญ — วิธีทำ slice, กับดัก, เกณฑ์เสร็จ),
    docs/WORKLOG.md (สอง entry บนสุดของ 2026-07-26), requirements-traceability.csv
 
 งานหลัก:

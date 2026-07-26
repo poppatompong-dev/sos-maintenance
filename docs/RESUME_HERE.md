@@ -3,6 +3,13 @@
 > Continuing on a **different machine / location**? Read
 > [`START_TOMORROW.md`](START_TOMORROW.md) — it walks through cloning fresh
 > anywhere and getting a new Claude session up to speed.
+>
+> **About to write code?** Read [`DEVELOPMENT_GUIDE.md`](DEVELOPMENT_GUIDE.md)
+> first — the principles you must not break and why, a worked example of a
+> full vertical slice, the testing strategy (a green suite is not enough — see
+> the multi-role bug of 2026-07-26), the traps that have already cost time, the
+> definition of done, and the specific technical starting point for each of the
+> four remaining gaps.
 
 _Always-current pointer. Read this first when you sit down at a machine._
 _Last updated: 2026-07-26 — **the owner has made the scope decision: build all

@@ -19,6 +19,7 @@ state and the next step. This page maps everything else.
 ## For understanding the system
 | Doc | What it's for |
 |---|---|
+| [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) | **คู่มือลงมือทำงานชิ้นถัดไป** — หลักการที่ห้ามแหก, กายวิภาคของหนึ่ง slice (ตัวอย่างจริงครบทุกชั้น), กลยุทธ์การทดสอบ, กับดักที่เคยเจอ, เกณฑ์ "เสร็จ", จุดเริ่มของงานที่เหลือ. อ่านต่อจาก RESUME_HERE ก่อนแตะโค้ด |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the code is organised as built: layers, modules, the readiness pipeline, ports/adapters, how to add a feature. |
 | [DESIGN.md](DESIGN.md) | UI design system: tokens, type, status vocabulary, accessibility. |
 | [adr/](adr/) | Architecture Decision Records (10) — the load-bearing choices. |
@@ -35,8 +36,19 @@ state and the next step. This page maps everything else.
 (agent prompt) > prototype (visual reference only).
 
 ## Status at a glance
-- ✅ Sprint 1 Foundation · ✅ Sprint 2 Domain layer · ✅ Sprint 3 UI/PWA shell · ✅ Sprint 4 DB wiring · ✅ Workflow UI `/today` happy-path UAT (local DB)
-- Tests: **182 unit passing** (22 files) + **43/43 DB integration** (9 files); typecheck / lint / build / diff-check green. CI pnpm mismatch **fixed**. (Prior CI-green baseline: 167 + 41/41, run 29977349490, commit `8ae02f9`.)
-- Guarded local demo fixture **DONE**: `pnpm db:seed:demo` (fail-closed, local-`sos`-only) → `/today` happy path verified on local PostGIS (see [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md)). Never fabricate production work orders.
-- Constraints: GPS >100m *mandatory reason* wiring missing — the `ChecklistResponse.locationReason` column already exists but DTO/service/UI wiring is absent (UAT case 8 not complete); public Vercel URL remains an OPEN security exception; Neon credential rotation still required before release.
-- Next: wire the GPS >100m mandatory reason (domain-first, with tests), then dashboard actions.
+
+> **Do not maintain a status snapshot here — it goes stale within a day.**
+> (This section used to claim 182 unit tests, a missing GPS-reason wiring, and
+> a pending Neon rotation long after all three were resolved. Corrected
+> 2026-07-26.)
+>
+> Two live sources instead:
+> - **[RESUME_HERE.md](RESUME_HERE.md)** — current state + the ordered next steps.
+> - **[../requirements-traceability.csv](../requirements-traceability.csv)** —
+>   which requirement is DONE / PARTIAL / NOT_STARTED, with the evidence for each.
+>   This is the artifact `spec/06` names as the release gate
+>   (*ห้ามปิด requirement ไม่มี evidence*).
+>
+> The one thing that stays true regardless: **the formal
+> `spec/06` QA/UAT gate has never been run end to end** — nothing here is
+> "production ready" until it has.
