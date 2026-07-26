@@ -93,20 +93,35 @@ export async function approveBaseline(
     );
   }
 
-  // 3. Object-level rule. Any role that permits wins; keep the last denial.
+  // 3. Object-level rule. Any role that permits wins.
+  //
+  // When every role denies, report the most *informative* reason rather than
+  // whichever role happened to be evaluated last. An actor holding several
+  // roles (internal mode grants all of them) would otherwise be told "only
+  // planners may approve" when the real reason is "already approved" — a
+  // dishonest message, and the exact bug this ordering fixes.
   let decision: BaselineApprovalDecision = {
     allowed: false,
+    code: 'NOT_AUTHORIZED',
     reason: 'ไม่มีสิทธิ์ดำเนินการ',
   };
   for (const role of cmd.actor.roles) {
-    decision = canApproveBaseline({
+    const attempt = canApproveBaseline({
       actorRole: role,
       actorUserId: cmd.actor.userId,
       alreadyApproved: asset.baselineApproved,
       assetRetired: asset.retired,
       survey: asset.survey,
     });
-    if (decision.allowed) break;
+    if (attempt.allowed) {
+      decision = attempt;
+      break;
+    }
+    // A state-specific denial (already approved, no survey, self-approval…)
+    // always beats the generic "this role may not approve".
+    if (decision.code === 'NOT_AUTHORIZED' && attempt.code !== 'NOT_AUTHORIZED') {
+      decision = attempt;
+    }
   }
   if (!decision.allowed) {
     throw new BaselineApprovalError(

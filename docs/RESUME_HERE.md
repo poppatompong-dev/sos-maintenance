@@ -25,7 +25,7 @@ first):
 
 | Order | Gap | Requirement ID | UAT case | Notes |
 |---|---|---|---|---|
-| ~~1~~ | ~~**Baseline approval workflow**~~ | `ASSET-06` | 1, 11 | ✅ **DONE 2026-07-26** (`e39a6e8` + `5c1b15e`). Domain rule + service + Prisma adapter + `POST /api/assets/:code/baseline-approval` + asset-detail UI panel. 14+14 unit tests, 9 integration tests against real Postgres. See the `docs/WORKLOG.md` 2026-07-26 entry. **Still to do:** exercise the UI panel in a real browser. |
+| ~~1~~ | ~~**Baseline approval workflow**~~ | `ASSET-06` | 1, 11 | ✅ **DONE 2026-07-26** (`e39a6e8` + `5c1b15e`). Domain rule + service + Prisma adapter + `POST /api/assets/:code/baseline-approval` + asset-detail UI panel. 14+16 unit tests, 9 integration tests against real Postgres, **and live-verified in the running app** (which caught a multi-role denial-message bug the itests missed — see the WORKLOG entry). |
 | 2 | **Scheduled readiness recompute** | `RDY-06` | 6 | The trigger already exists — `vercel.json` runs a daily cron on `/api/jobs/tick`. The gap is only the recompute logic inside `run-job-tick.ts` (today it just counts assets in scope). |
 | 3 | **SMTP email transport** | `OPS-05` | 4 | Moderate Nodemailer wiring. EMAIL notifications are deliberately left `PENDING` today, never dropped — so the queue side is already correct. |
 | 4 | **Photo capture UI** | `UI-03` | 3 | Storage backend done (`SEC-03`). Owner already chose the initial-survey checklist as the first home for it (2026-07-25). `QrScanner.tsx`'s `getUserMedia` is the nearest precedent — confirm the exact UX shape before building. |
@@ -48,8 +48,16 @@ session.
 
 **Also open, tracked in the CSV, not part of the 5:** `QA-02` (no Playwright
 E2E / a11y smoke in CI), `QA-03` (CI last confirmed green on commit `2613940`,
-not on the six commits since — re-confirm before relying on it), `OPS-01`
+not on the commits since — re-confirm before relying on it), `OPS-01`
 (backup script exists, a restore has never actually been performed).
+
+**Small known defect, not yet ticketed anywhere else:** the readiness reason
+for `CRITICAL_RESULT_MISSING` renders in Thai UI as
+`ไม่มีผลตรวจล่าสุดของฟังก์ชันวิกฤต “{label}”` — the `{label}` placeholder is
+never substituted when that branch fires for "no critical checks at all"
+(`src/domain/readiness/engine.ts`). Found 2026-07-26 while live-verifying
+baseline approval. Pre-existing, tiny, and a UI-honesty problem (operators see
+a raw placeholder). Good candidate for a warm-up slice.
 
 ## Reference: the 2026-07-25 case-by-case audit that produced the list above
 Every remaining engineering item and every release-blocker from prior

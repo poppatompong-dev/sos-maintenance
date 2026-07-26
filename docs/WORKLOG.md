@@ -72,9 +72,50 @@ shape is `{ key, label, result }`. Vitest passed anyway — the engine simply
 saw no PASS/FAIL and fell through. `pnpm typecheck` is what caught it. A green
 `pnpm test` alone would have shipped two tests that asserted nothing.
 
-**Not done:** the UI panel has not been exercised in a real browser yet, and
-`requiresPhoto` is still not enforced server-side anywhere (a survey can be
-submitted without its photos today) — that belongs with `UI-03`, not here.
+**Live verification (dev server on :3100, local Postgres) — and it found a
+real bug.** Throwaway fixture `EP_UATBL` with a CLOSED initial survey
+submitted by a throwaway technician; guarded demo untouched; everything
+deleted afterwards and the deletion confirmed.
+- `/assets/EP01` (no survey) → renders "ยังอนุมัติไม่ได้ — จุดติดตั้งนี้ยังไม่มี
+  ใบงานสำรวจตั้งต้น". Honest-refusal path works.
+- `/assets/EP_UATBL` before → renders the reference line + the approve button.
+- `POST` → 200, and readiness came back the *computed* `UNKNOWN`
+  (`CRITICAL_RESULT_MISSING`) — not READY. `NO_APPROVED_BASELINE` gone.
+- page after → "อนุมัติแล้ว โดย เจ้าหน้าที่ภายใน (ไม่ใช้ login)"; DB shows the
+  approval fields plus exactly one BASELINE_APPROVED snapshot.
+- **Second POST returned the WRONG message:** `NOT_AUTHORIZED`
+  ("เฉพาะผู้วางแผน…เท่านั้น") instead of `ALREADY_APPROVED`. Cause: the
+  service's "any role that permits wins" loop kept whichever role was
+  evaluated **last**, and internal auth mode grants all four roles — so a
+  TECHNICIAN/EXECUTIVE denial masked the real reason. The 9 integration tests
+  missed it because their session carries a single role. **Fixed:** a
+  state-specific denial now always beats the generic NOT_AUTHORIZED, with two
+  new unit tests for a multi-role actor (one that must fail with the state
+  reason, one that must still succeed). Re-verified live: second POST now
+  returns 409 `ALREADY_APPROVED`. This is exactly why the project requires
+  live verification and not just a green suite — the same last-role-wins
+  pattern exists in `transition-work-order.ts` and is worth checking there
+  when someone next touches it.
+
+**Final gate:** `pnpm test` **285/285** (30 files) · integration **78 passing
+/ 2 failing** (the known pre-existing `read-routes.itest.ts` stale-local-seed
+failures) · typecheck, lint, build clean.
+
+**Noticed, not fixed (pre-existing, outside this slice):** the readiness
+reason message for `CRITICAL_RESULT_MISSING` renders as
+`ไม่มีผลตรวจล่าสุดของฟังก์ชันวิกฤต “{label}”` — the `{label}` placeholder is
+never substituted when the branch fires for "no critical checks at all"
+(`src/domain/readiness/engine.ts`). Operators would see a raw placeholder in
+Thai UI. Small, real, and a UI-honesty issue; worth its own tiny slice.
+
+**Also stale, now corrected:** `RESUME_HERE.md` described
+`DEMO-LOCAL-EP01-MONTHLY-V2` as SUBMITTED; the local DB actually has it CLOSED
+(and v1 IN_PROGRESS). Not changed by this session — the demo fixtures were
+verified intact after cleanup (2 demo work orders, 27 assets).
+
+**Not done:** `requiresPhoto` is still not enforced server-side anywhere (a
+survey can be submitted without its photos today) — that belongs with `UI-03`,
+not here.
 
 ---
 

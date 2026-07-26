@@ -231,6 +231,34 @@ describe('approveBaseline — refusals carry the domain code', () => {
     ).rejects.toMatchObject({ code: 'ALREADY_APPROVED' });
   });
 
+  it('a multi-role actor gets the state-specific reason, not "not authorized"', async () => {
+    // Internal auth mode grants every role at once. Evaluating roles in order
+    // must not let a later TECHNICIAN/EXECUTIVE denial mask the real reason.
+    const { port } = portFor(surveyed({ baselineApproved: true }));
+    await expect(
+      approveBaseline(port, {
+        ...plannerCmd,
+        actor: {
+          userId: 'multi-1',
+          roles: ['PLANNER', 'TECHNICIAN', 'EXECUTIVE', 'SYSTEM_ADMIN'],
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'ALREADY_APPROVED' });
+  });
+
+  it('a multi-role actor whose PLANNER role permits still succeeds', async () => {
+    const { port } = portFor(surveyed());
+    await expect(
+      approveBaseline(port, {
+        ...plannerCmd,
+        actor: {
+          userId: 'multi-2',
+          roles: ['TECHNICIAN', 'EXECUTIVE', 'PLANNER'],
+        },
+      }),
+    ).resolves.toMatchObject({ approverUserId: 'multi-2' });
+  });
+
   it('retired asset', async () => {
     const { port } = portFor(surveyed({ retired: true }));
     await expect(
