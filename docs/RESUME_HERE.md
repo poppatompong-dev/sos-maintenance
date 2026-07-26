@@ -5,18 +5,41 @@
 > anywhere and getting a new Claude session up to speed.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-25, evening — **both remaining release-blockers are now
-CLOSED**: the public Vercel URL is gated behind `SITE_ACCESS_PASSWORD`
-(HTTP Basic Auth, `src/proxy.ts`) and the Neon production DB credential has
-been rotated, both confirmed working live in production. Session paused here
-for the day; a same-day audit against `docs/spec/06_DELIVERY_QA_UAT.md`'s 11
-mandatory UAT cases is written up in "▶ Next" below as tomorrow's starting
-point — it found 4 concrete engineering gaps (baseline approval, email
-transport, scheduled readiness recompute, reports/PDF/Excel) plus the
-already-known photo-capture UI. QA/UAT gate as a formal process still NOT
-run — do not claim production-ready until it's actually completed._
+_Last updated: 2026-07-26 — **the owner has made the scope decision: build all
+5 remaining gaps before any release claim.** `requirements-traceability.csv` has
+been refreshed against the real code (32 → 48 rows, new `uat_case` column,
+21 DONE / 19 PARTIAL / 8 NOT_STARTED) — it is now trustworthy and is the
+artifact `docs/spec/06` says gates closure. Both prior release-blockers stay
+closed (password gate + Neon rotation, live and verified). QA/UAT gate as a
+formal process still NOT run — do not claim production-ready until it is._
 
-## ▶ Next: honest gap-audit against `docs/spec/06_DELIVERY_QA_UAT.md`, then an owner scope decision
+## ▶ Next: build the 5 agreed gaps, smallest first
+
+**Owner decision, 2026-07-26 — do not re-litigate this:** all five gaps get
+built before any "พร้อมใช้งานจริง" claim. No smaller v1, no
+known-limitations shortcut. Recommended order (smallest / most unblocking
+first):
+
+| Order | Gap | Requirement ID | UAT case | Notes |
+|---|---|---|---|---|
+| 1 | **Baseline approval workflow** | `ASSET-06` | 1, 11 | Small and contained. `Asset.baselineApproved` is already read by the readiness engine and every query — nothing writes it. Unblocks cutover (`CUT-01`). Start here. |
+| 2 | **Scheduled readiness recompute** | `RDY-06` | 6 | The trigger already exists — `vercel.json` runs a daily cron on `/api/jobs/tick`. The gap is only the recompute logic inside `run-job-tick.ts` (today it just counts assets in scope). |
+| 3 | **SMTP email transport** | `OPS-05` | 4 | Moderate Nodemailer wiring. EMAIL notifications are deliberately left `PENDING` today, never dropped — so the queue side is already correct. |
+| 4 | **Photo capture UI** | `UI-03` | 3 | Storage backend done (`SEC-03`). Owner already chose the initial-survey checklist as the first home for it (2026-07-25). `QrScanner.tsx`'s `getUserMedia` is the nearest precedent — confirm the exact UX shape before building. |
+| 5 | **Reports PDF / Excel** | `RPT-02` | 9, 10 | Multi-session. Deserves its own plan doc (use `docs/superpowers/plans/2026-07-23-flexible-field-checklist.md` as the template) before any code. Metrics already share one definition (`src/domain/metrics`), so the data side is ready. |
+
+After all five: run the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate
+end-to-end (`QA-01`), recording the `AUTH_MODE=internal` exception as part of
+it. `CUT-01` (27 poles surveyed with approved baselines) is **operational, not
+engineering** — it happens on the municipality's timeline, not in a coding
+session.
+
+**Also open, tracked in the CSV, not part of the 5:** `QA-02` (no Playwright
+E2E / a11y smoke in CI), `QA-03` (CI last confirmed green on commit `2613940`,
+not on the six commits since — re-confirm before relying on it), `OPS-01`
+(backup script exists, a restore has never actually been performed).
+
+## Reference: the 2026-07-25 case-by-case audit that produced the list above
 Every remaining engineering item and every release-blocker from prior
 sessions is now done: the flexible grouped checklist, the GPS >100m mandatory
 reason (UAT case 8), the dashboard nav/CTA honesty fix, the Planner console
@@ -25,22 +48,15 @@ the real technician picker, and — as of this session — the shared-password
 gate **and** the Neon credential rotation, both live and verified in
 production.
 
-**Do NOT start by writing code tomorrow.** The formal QA/UAT gate has never
-actually been run end-to-end, and a same-day check of the 11 mandatory UAT
-cases in `docs/spec/06_DELIVERY_QA_UAT.md` against the real code (done this
-session, findings below) shows **several cases depend on features that don't
-exist yet** — some small, one large. Building blind against a stale
-`requirements-traceability.csv` (last touched around Sprint 3–4, doesn't even
-mention Planner console v1/QR/storage/offline-queue/technician-picker/security
--gate/Neon-rotation) would repeat the exact scope-creep mistake this project
-has deliberately avoided elsewhere (see the photo-capture-UI and
-technician-picker precedents). **Step 1 tomorrow: refresh
-`requirements-traceability.csv` and present the honest picture below to the
-owner for a scope decision before implementing anything.**
+**Both prerequisites of this audit are now resolved (2026-07-26):** the
+traceability refresh is **done** (`requirements-traceability.csv`, 48 rows —
+trust it now, it is no longer stale), and the owner has **decided the scope**
+(build all 5). The audit below is kept as the reasoning behind that list; the
+actionable version is the table under "▶ Next" above.
 
 **Case-by-case audit against `docs/spec/06`'s 11 mandatory UAT cases
-(checked against real code this session — trust this over
-`requirements-traceability.csv`, which is stale):**
+(checked against real code 2026-07-25, re-verified 2026-07-26 during the
+traceability refresh):**
 
 1. **27 assets + baseline approval** — 27 assets: done. **Baseline approval
    has no real workflow at all** — `Asset.baselineApproved` is read
@@ -100,22 +116,16 @@ owner for a scope decision before implementing anything.**
     readiness, on the municipality's own timeline. Don't try to "complete"
     it in a coding session.
 
-**Recommended shape for tomorrow, in order:**
-1. Refresh `requirements-traceability.csv` against the audit above (mechanical,
-   ~30–60 min) — this is the artifact the spec itself says gates closure
-   ("ห้ามปิด requirement ไม่มี evidence").
-2. Bring the owner the honest picture: 4 solid gaps identified (baseline
-   approval, email transport, scheduled readiness recompute, reports
-   PDF/Excel) plus the photo-capture UI already agreed. Ask explicitly:
-   build all of it before any release claim, or agree a smaller v1 scope
-   with the rest recorded as known limitations? **Do not decide this
-   unilaterally** — same precedent as every other scope call this project
-   has deferred to the owner.
-3. Only after that decision, sequence the agreed slices — likely smallest
-   first (baseline approval is probably a small, contained feature; the
-   scheduled recompute job may already have most of its plumbing in
-   `run-job-tick.ts`; email transport is a moderate Nodemailer wiring job;
-   reports is the multi-session one).
+**Both planning steps this audit called for are now DONE (2026-07-26):**
+1. ~~Refresh `requirements-traceability.csv`~~ — **DONE.** 48 rows with a
+   `uat_case` column; 21 DONE / 19 PARTIAL / 8 NOT_STARTED. Evidence was
+   re-collected from the real code this session, not copied from notes — see
+   the `docs/WORKLOG.md` 2026-07-26 entry for exactly what was checked and
+   what was deliberately left PARTIAL.
+2. ~~Owner scope decision~~ — **DONE. Owner chose: build all 5 gaps before
+   any release claim.** No smaller v1.
+3. Sequenced slices — see the table under "▶ Next" at the top of this file.
+   **Start with baseline approval (`ASSET-06`).**
 
 **Security-boundary closure, 2026-07-25 evening — final state, verified live:**
 - `src/proxy.ts` (HTTP Basic Auth gate) pushed and deployed (`f938d9c` →
@@ -208,6 +218,10 @@ decision that should not be resolved unilaterally:
   UI anywhere to date; QR scan's `getUserMedia` pattern is the nearest
   precedent). Confirm the UX shape with the owner before implementing, same
   as the checklist-photo-stripping precedent from 2026-07-24.
+  **Updated 2026-07-26:** the owner has approved *building* it (`UI-03`, 4th of
+  the agreed 5) — so it is no longer scope-blocked. The remaining question is
+  only the UX shape inside the initial-survey checklist; ask that when the
+  slice starts, not before.
 
 (The real technician picker for the `ASSIGNED` transition was in this
 section until 2026-07-25 — resolved once the owner confirmed a real name;
@@ -246,6 +260,15 @@ before a release claim is **process, not code**: the formal
 `docs/spec/06_DELIVERY_QA_UAT.md` gate has never actually been run end-to-end
 as a documented exercise.
 
+**Superseded 2026-07-26 — read this instead.** The paragraph above was written
+before the traceability refresh and is too optimistic. The honest list of what
+blocks a release claim is now the 8 `NOT_STARTED` rows in
+`requirements-traceability.csv`: `ASSET-06` baseline approval · `RDY-06`
+scheduled readiness recompute · `OPS-05` SMTP transport · `UI-03` photo capture
+UI · `RPT-02` PDF/Excel reports · `QA-01` the gate itself · `QA-02` no
+Playwright/a11y in CI · `CUT-01` cutover. The owner has agreed to build the
+first five. See "▶ Next" at the top.
+
 ## Next steps (in order)
 1. ~~**Safe test environment + guarded demo fixture**~~ — **DONE.** Local Docker
    PostGIS is healthy; `pnpm db:seed:demo` creates one idempotent, fail-closed,
@@ -281,15 +304,21 @@ as a documented exercise.
 6. ~~**Security: rotate the Neon credential**~~ — **DONE (2026-07-25).** The
    `neondb_owner` password was reset and `DATABASE_URL` swapped in Vercel;
    owner-verified live (dashboard loads all 27 poles, no DB errors).
-7. **Release gate (NEXT):** both prerequisites above are now satisfied — run
-   the actual `docs/spec/06_DELIVERY_QA_UAT.md` gate end-to-end (it has not
-   been formally executed this project), with the internal-mode exception
-   recorded as part of it.
-8. **Later product depth:** reports, online MapLibre map (accessible list fallback
-   already built), optional Keycloak mode if policy changes, and client
-   photo-capture UI for the initial-survey checklist (owner already picked
-   this flow 2026-07-25 — see "Blocked, not missing" above — the remaining
-   work is UX + implementation, not a scope decision).
+7. ~~**Traceability refresh**~~ — **DONE (2026-07-26).**
+   `requirements-traceability.csv` rebuilt against the real code, 48 rows with
+   a `uat_case` column. Evidence re-collected this session; see the
+   `docs/WORKLOG.md` 2026-07-26 entry.
+8. **The 5 agreed gaps (NEXT)** — owner decided 2026-07-26 to build all of
+   them before any release claim. Order and detail: the table under "▶ Next"
+   at the top of this file. **Start with `ASSET-06` baseline approval.**
+9. **Release gate (after the 5):** run the actual
+   `docs/spec/06_DELIVERY_QA_UAT.md` gate end-to-end (`QA-01` — never formally
+   executed this project), with the `AUTH_MODE=internal` exception recorded as
+   part of it.
+10. **Later product depth (not in the agreed 5):** online MapLibre map
+   (accessible list fallback already built), optional Keycloak mode if policy
+   changes, Playwright E2E + a11y smoke in CI (`QA-02`), and an actual tested
+   backup restore (`OPS-01`).
 
 **Docker safety (local only):** the dev compose declares **two** named volumes,
 `db-data` **and** `keycloak-data`. **Never run `docker compose down -v`** — it

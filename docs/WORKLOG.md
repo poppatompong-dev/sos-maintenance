@@ -5,6 +5,65 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-26 — `requirements-traceability.csv` refreshed against the real code
+
+**Why:** `docs/spec/06_DELIVERY_QA_UAT.md` names this file as the gate artifact
+("ห้ามปิด requirement ไม่มี evidence"), but it had not been touched since
+roughly Sprint 3–4. It knew nothing about the flexible checklist v2, the GPS
+>100m reason, the Planner console, QR scan, photo storage, the offline queue,
+the technician picker, the shared-password gate, or the Neon rotation — and it
+recorded no gaps at all. Building the remaining work against it would have
+meant building blind.
+
+**Owner scope decision (2026-07-26):** presented the 5 gaps from the 2026-07-25
+audit and asked whether to build all of them before any release claim or agree
+a smaller v1. Owner chose **build all 5** (baseline approval, scheduled
+readiness recompute, email transport, photo capture UI, reports PDF/Excel) and
+chose to start with this traceability refresh.
+
+**What changed:** rewritten from 32 rows to **48 rows**. Added a `uat_case`
+column so every row links to the mandatory UAT cases in `docs/spec/06`, which
+is what actually gates release. Status vocabulary is now
+`DONE` / `PARTIAL` / `NOT_STARTED` — **21 DONE, 19 PARTIAL, 8 NOT_STARTED**.
+
+New rows for work that existed in the repo but not in the CSV: `ASSET-05` (QR),
+`PM-01`/`PM-05` (checklist versioning, schedule batches), `WO-04`/`WO-05`
+(technician picker, repair accept), `OFF-04` (IndexedDB queue), `SEC-04`/`SEC-05`
+(password gate, credential rotation), `UI-04` (Thai vocabulary), `RPT-03`
+(executive read-only).
+
+New rows naming the gaps honestly, so they can never be quietly closed:
+`ASSET-06` baseline approval · `RDY-06` scheduled readiness recompute ·
+`OPS-05` SMTP transport · `UI-03` photo capture UI · `RPT-02` PDF/Excel ·
+`QA-01` the gate itself never run · `QA-02` no Playwright/a11y in CI ·
+`CUT-01` cutover (operational, not closable by coding).
+
+**Evidence collected this session, not copied from prior notes:**
+`pnpm test` → **255 passing / 28 files** (per-file counts recorded in the
+`evidence` column). `grep` confirmed no writer of `baselineApproved` outside
+seed/demo fixtures; `package.json` confirmed no nodemailer/playwright/exceljs/
+pdfkit/jspdf/xlsx dependency; `run-job-tick.ts` confirmed EMAIL rows are left
+PENDING by design and readiness reconciliation only counts assets.
+`vercel.json` **does** already run a daily cron on `/api/jobs/tick` — so
+`RDY-06` needs the recompute logic, not the trigger.
+
+**Deliberately marked PARTIAL rather than DONE**, because the evidence is
+manual-only or the surrounding gate has never been run: `OFF-04` (offline queue
+proven live once, no automated browser test — this repo has no jsdom setup),
+`SEC-04` (password gate verified live, no automated test), `SEC-01` (role
+matrix tested, but no documented per-endpoint audit of all 18 routes),
+`OPS-01` (backup script exists, a restore has never been performed),
+`WO-05` (code + itest exist, no live repair→retest→READY run yet),
+`QA-03` (CI last confirmed green on commit `2613940`, not on the six commits
+since). Integration tests were **not** re-run this session — Docker was not
+running on this machine — so DB-backed rows cite the recorded CI run, not a
+fresh local pass.
+
+**Not done here:** no production code changed. This entry is the traceability
+artifact only.
+
+---
+
 ## 2026-07-25 — Shared-password gate in front of the app (`src/proxy.ts`)
 
 **FACT:** The release-blocker list called for restricting the public Vercel URL
