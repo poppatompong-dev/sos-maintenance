@@ -2,19 +2,30 @@
 
 สรุปสั้น ๆ ก่อนเริ่ม แล้วมี **คำสั่งพร้อมใช้หนึ่งชุด** ให้คัดลอกไปวางได้เลยด้านล่าง
 
-> **Checkpoint ปัจจุบัน (2026-07-23, ปิดวัน):**
-> - Design ของ **flexible field checklist** ได้รับ **owner approval** และ
->   **implementation plan เสร็จสมบูรณ์** แล้ว — แต่ **ยังไม่เริ่ม implement**
->   (งานวันนี้เป็น docs-only เท่านั้น ไม่มีการรัน runtime test)
-> - **slice ถัดไป = flexible field checklist** (ทำก่อน) แล้วจึงกลับไป GPS >100m reason
+> **Checkpoint ปัจจุบัน (2026-07-26, ปิดวัน):**
+> - **เจ้าของงานตัดสินใจแล้ว:** ต้องทำช่องว่างที่เหลือ **ครบทั้ง 5 จุด**
+>   ก่อนจะประกาศว่า "พร้อมใช้งานจริง" — ไม่ตัด scope, ไม่ใช้วิธีบันทึกเป็น
+>   ข้อจำกัดแล้วปล่อยผ่าน
+> - **`requirements-traceability.csv` รีเฟรชแล้ว** (48 แถว, 22 DONE / 19
+>   PARTIAL / 7 NOT_STARTED) — เชื่อถือได้แล้ว ใช้เป็นตัวตัดสินว่าอะไรเสร็จจริง
+> - **จุดที่ 1 เสร็จแล้ว:** อนุมัติ baseline (`ASSET-06`) — domain + service +
+>   adapter + API + UI, มี integration test กับ Postgres จริง และทดสอบสดในแอปแล้ว
+> - **slice ถัดไป = `RDY-06` คำนวณความพร้อมใหม่ตามเวลา** (ดูตารางลำดับงานใน
+>   `docs/RESUME_HERE.md`)
+> - **ยังไม่เคยรัน QA/UAT gate ตาม `docs/spec/06` แบบเป็นทางการ** — ห้ามอ้างว่า
+>   พร้อม production
 > - Repo (private): **https://github.com/poppatompong-dev/sos-maintenance** — branch `main`
 
 ## เอกสารที่ต้องอ่านก่อนลงมือ (ตามลำดับ)
 1. `AGENTS.md` (กติกาโปรเจกต์ที่บังคับใช้)
-2. `docs/RESUME_HERE.md` (สถานะปัจจุบัน + ลำดับงานถัดไป)
-3. `docs/WORKLOG.md` (ประวัติ + เหตุผลการตัดสินใจ)
-4. **Approved design:** `docs/superpowers/specs/2026-07-23-flexible-field-checklist-design.md`
-5. **Implementation plan (execute จาก Task 1):** `docs/superpowers/plans/2026-07-23-flexible-field-checklist.md`
+2. `docs/RESUME_HERE.md` (สถานะปัจจุบัน + ลำดับงานถัดไป) — **แหล่งความจริงหลัก**
+3. `docs/WORKLOG.md` (ประวัติ + เหตุผลการตัดสินใจ อ่าน entry 2026-07-26 สองอันบนสุด)
+4. `requirements-traceability.csv` (requirement ไหนเสร็จ/ไม่เสร็จ พร้อมหลักฐาน)
+
+> **หมายเหตุ:** flexible field checklist (`docs/superpowers/plans/2026-07-23-…`)
+> **ทำเสร็จไปแล้วตั้งแต่ 2026-07-24** — เอกสารนั้นเก็บไว้เป็นประวัติและเป็น
+> *ต้นแบบรูปแบบ plan* สำหรับงานใหญ่ (เช่น รายงาน PDF/Excel) เท่านั้น
+> **อย่าเอาไป execute ซ้ำ**
 
 ## ข้อควรระวังที่พลาดบ่อย
 - **Workspace ปัจจุบัน = `D:\sos-maintenance`** (ไม่ใช่ `C:\dev\...` แบบเดิม)
@@ -42,20 +53,28 @@ git add -A && git commit -m "..." && git push   # ★ ก่อนเลิก/�
 ขั้นเตรียม:
 1. cd D:\sos-maintenance แล้ว `git pull` ก่อนเป็นอย่างแรก
 2. ยืนยัน checkpoint สะอาดและ sync แล้ว: `git status --short` ต้องไม่มีอะไรค้าง และ branch main ตรงกับ origin/main
-3. อ่านให้ครบก่อนแตะโค้ด: AGENTS.md, docs/RESUME_HERE.md, docs/WORKLOG.md,
-   approved design (docs/superpowers/specs/2026-07-23-flexible-field-checklist-design.md),
-   และ implementation plan (docs/superpowers/plans/2026-07-23-flexible-field-checklist.md)
+3. อ่านให้ครบก่อนแตะโค้ด: AGENTS.md, docs/RESUME_HERE.md (ตาราง "5 จุด"),
+   docs/WORKLOG.md (สอง entry บนสุดของ 2026-07-26), requirements-traceability.csv
 
 งานหลัก:
-- Execute แผน docs/superpowers/plans/2026-07-23-flexible-field-checklist.md ตั้งแต่ Task 1 ไปตามลำดับ
-- ทำแบบ test-first (red → green → refactor), commit เป็น small vertical slice, ให้ Codex review คั่นระหว่าง task ที่มีความหมาย
+- ทำ slice ถัดไปตามตารางใน docs/RESUME_HERE.md — ตอนนี้คือ RDY-06
+  (คำนวณความพร้อมใหม่ตามเวลา ใน src/server/services/run-job-tick.ts)
+  โดย "ใช้ซ้ำ" logic โหลด readiness facts ที่มีอยู่แล้วใน
+  src/server/adapters/prisma-baseline-port.ts อย่าเขียนซ้ำเป็นชุดที่สอง
+- ทำแบบ test-first (red → green → refactor), commit เป็น small vertical slice
 - ยึดกติกาโปรเจกต์ปัจจุบัน (AGENTS.md) และอ่าน Next.js local docs ใน node_modules/next/dist/docs/ ก่อนเขียนโค้ด Next.js
+- **ตรวจในแอปจริงเสมอ ไม่ใช่แค่ให้ test เขียว** — วันที่ 2026-07-26 การทดสอบสด
+  เจอบั๊กข้อความ (multi-role) ที่ integration test 9 ตัวจับไม่ได้
 
 สภาพแวดล้อม (บังคับ):
 - ใช้ local Docker/PostGIS เท่านั้น ห้ามแตะ production/Neon
 - integration/migration shell: ปล่อย AUTH_MODE และ AUTH_DEV_BYPASS ว่างไว้ (ให้ test ตั้ง auth เอง)
 - browser/demo shell: ใช้ approved internal mode ได้ (AUTH_MODE=internal + LOCAL_DEMO_CONFIRM=SOS_LOCAL_DEMO)
 - แอปใช้ port 3100 เท่านั้น (port 3000 เป็นของ thai-memo-app ที่ไม่เกี่ยวข้อง ห้ามแตะ)
+- คำสั่งรัน dev ที่ถูกต้องคือ `pnpm dev -p 3100` — **ห้ามใส่ `--`**
+  (`pnpm dev -- -p 3100` จะพังด้วย "Invalid project directory provided")
+- ไม่มีไฟล์ .env ใน repo ต้อง set เองใน shell เดียวกัน:
+  $env:DATABASE_URL = "postgresql://sos:sos@localhost:5432/sos?schema=public"
 - ห้าม print หรือเก็บ connection string / secret ใด ๆ
 
 Docker volume safety (บังคับ):
@@ -70,8 +89,11 @@ Docker volume safety (บังคับ):
   (อย่าอ้างผล test ที่ไม่ได้รัน อย่าอ้างว่าปิด QA/UAT gate)
 
 ปิดงาน:
-- รัน gate ครบตาม Task 16: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `git diff --check`,
+- รัน gate ครบ: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `git diff --check`,
   และ `pnpm test:integration` — บันทึก exit code และยอด pass/fail ที่ได้จริง
+- baseline ที่ควรได้ (2026-07-26): unit 285 ผ่าน / 30 ไฟล์ · integration 78 ผ่าน / 2 ตก
+  (2 ตัวที่ตกคือ src/app/api/read-routes.itest.ts ซึ่งคาดว่า seed ว่าง แต่ DB เครื่องนั้น
+  มี demo fixture ค้าง — เป็นของเดิม ไม่ใช่ regression)
 - เมื่อ gate เขียวทั้งหมด ค่อย commit (ต้องมี trailer: Co-Authored-By: Claude <noreply@anthropic.com>) แล้ว push
 
 รายงานปิดท้ายแบบกระชับ FACT / DECISION / NEXT / BLOCKER พร้อม:

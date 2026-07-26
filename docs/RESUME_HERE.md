@@ -25,7 +25,7 @@ first):
 
 | Order | Gap | Requirement ID | UAT case | Notes |
 |---|---|---|---|---|
-| ~~1~~ | ~~**Baseline approval workflow**~~ | `ASSET-06` | 1, 11 | ✅ **DONE 2026-07-26** (`e39a6e8` + `5c1b15e`). Domain rule + service + Prisma adapter + `POST /api/assets/:code/baseline-approval` + asset-detail UI panel. 14+16 unit tests, 9 integration tests against real Postgres, **and live-verified in the running app** (which caught a multi-role denial-message bug the itests missed — see the WORKLOG entry). |
+| ~~1~~ | ~~**Baseline approval workflow**~~ | `ASSET-06` | 1, 11 | ✅ **DONE 2026-07-26** (`e39a6e8` → `5c1b15e` → `ced94a5` → `64837e2`). Domain rule + service + Prisma adapter + `POST /api/assets/:code/baseline-approval` + asset-detail UI panel. 14+16 unit tests, 9 integration tests against real Postgres, **and live-verified in the running app** (which caught a multi-role denial-message bug the itests missed — see the WORKLOG entry). |
 | 2 | **Scheduled readiness recompute** | `RDY-06` | 6 | The trigger already exists — `vercel.json` runs a daily cron on `/api/jobs/tick`. The gap is only the recompute logic inside `run-job-tick.ts` (today it just counts assets in scope). |
 | 3 | **SMTP email transport** | `OPS-05` | 4 | Moderate Nodemailer wiring. EMAIL notifications are deliberately left `PENDING` today, never dropped — so the queue side is already correct. |
 | 4 | **Photo capture UI** | `UI-03` | 3 | Storage backend done (`SEC-03`). Owner already chose the initial-survey checklist as the first home for it (2026-07-25). `QrScanner.tsx`'s `getUserMedia` is the nearest precedent — confirm the exact UX shape before building. |
@@ -174,18 +174,20 @@ traceability refresh):**
   boundary, not a bug to route around; the owner did every actual secret-entry
   step by hand in the end, which is the correct pattern going forward too.
 
-**Local dev server, started this session for hands-on UI checking (separate
-from the above — this is purely local, does not touch Vercel/Neon at all):**
-Docker Desktop was started, `docker compose up -d postgres` brought up
-`sos-maintenance-postgres-1` (still running, healthy). `pnpm dev` is running
-on `http://localhost:3100` with `DATABASE_URL` pointed at the **local**
-Postgres (`postgresql://sos:sos@localhost:5432/sos?schema=public`) and
-`AUTH_MODE=internal` set in the shell (no `.env` file in this tree — see
-"Get running" below). If it's not responding when you sit back down, just
-re-run the command in "Get running". Local DB already has the 27-pole seed +
-2 guarded demo work orders on EP01 (`DEMO-LOCAL-EP01-MONTHLY` — legacy v1,
-frozen/reissue-advisory; `DEMO-LOCAL-EP01-MONTHLY-V2` — SUBMITTED) plus
-technician **สมชาย** — all from prior sessions' guarded fixtures, untouched.
+**Local database state (per machine — this is NOT carried by git).** Each
+machine keeps its own Docker volume, so the office and home DBs drift apart
+and that is fine. Everything the project needs is reproducible:
+`docker compose up -d postgres` then `pnpm db:setup` (or `pnpm db:migrate` +
+`pnpm db:postgis` + `pnpm db:seed`), optionally `pnpm db:seed:demo` for the
+guarded demo work order. See `docs/DEMO_RUNBOOK.md`.
+
+**Verified on the office machine, 2026-07-26:** 27 assets seeded, 2 guarded
+demo work orders on EP01 (`DEMO-LOCAL-EP01-MONTHLY` — legacy v1,
+frozen/reissue-advisory, currently `IN_PROGRESS`; `DEMO-LOCAL-EP01-MONTHLY-V2`
+— currently `CLOSED`), plus technician **สมชาย**. *(This file previously said
+V2 was `SUBMITTED`; it is CLOSED — corrected after reading the DB directly.
+Nothing in the 2026-07-26 session changed them; they were confirmed intact
+after that session's throwaway fixtures were deleted.)*
 
 **ดูสถานะ milestone และหลักฐานล่าสุด:** [`ROADMAP_CHECKPOINT.md`](ROADMAP_CHECKPOINT.md)
 
@@ -252,10 +254,27 @@ see "Where we are" above.)
 ```powershell
 cd D:\sos-maintenance
 git pull
-pnpm install          # if deps changed
-pnpm test             # confirm green (baseline 182 unit tests, 22 files)
-pnpm dev -- -p 3100   # http://localhost:3100  (see port note below)
+pnpm install        # if deps changed
+pnpm test           # confirm green (baseline 2026-07-26: 285 tests, 30 files)
+pnpm dev -p 3100    # http://localhost:3100  (see port note below)
 ```
+
+> **Do NOT write `pnpm dev -- -p 3100`.** The `--` separator is wrong for this
+> Next version — it is passed through as a positional argument and the dev
+> server dies with `Invalid project directory provided, no such directory:
+> D:\sos-maintenance\-p`. (This file said `--` until 2026-07-26; corrected
+> after hitting it.) Use `pnpm dev -p 3100`.
+
+**Anything that touches the database** (`pnpm dev` rendering real data,
+`pnpm test:integration`, `pnpm db:*`) needs Docker up **and** the env vars set
+in the *same shell* — there is no `.env` file in this tree:
+```powershell
+docker compose up -d postgres     # wait for healthy (~15-30s)
+$env:DATABASE_URL = "postgresql://sos:sos@localhost:5432/sos?schema=public"
+$env:AUTH_MODE = "internal"       # needed for /today and for write APIs
+```
+`pnpm test` (unit) needs none of this — it is pure and runs anywhere.
+
 **On a NEW machine:** follow `docs/DEVELOPING.md`, then clone to a local path and
 run `pwsh ./scripts/bootstrap.ps1`.
 
