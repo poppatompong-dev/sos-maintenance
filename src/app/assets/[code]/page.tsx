@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AppRail } from '@/components/AppRail';
+import { BaselineApproval } from '@/components/BaselineApproval';
 import { StatusBadge } from '@/components/StatusBadge';
 import { MapPinIcon, AlertTriangleIcon, ClipboardIcon } from '@/components/icons';
 import { getAssetDetail, type AssetDetail } from '@/server/queries/assets';
@@ -132,10 +133,6 @@ export default async function AssetDetailPage({
                       <dt className="text-muted">สถานะวงจรชีวิต</dt>
                       <dd className="font-medium text-ink">{detail.lifecycle}</dd>
                     </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted">อนุมัติสำรวจตั้งต้น</dt>
-                      <dd className="font-medium text-ink">{detail.baselineApproved ? 'แล้ว' : 'ยังไม่อนุมัติ'}</dd>
-                    </div>
                     <div className="flex items-center justify-between gap-3">
                       <dt className="flex items-center gap-1.5 text-muted">
                         <MapPinIcon size={14} /> พิกัด
@@ -145,6 +142,16 @@ export default async function AssetDetailPage({
                       </dd>
                     </div>
                   </dl>
+                </Card>
+
+                <Card title="ผลสำรวจตั้งต้น">
+                  <BaselineApproval
+                    code={detail.code}
+                    approved={detail.baselineApproved}
+                    approvedAt={detail.baseline.approvedAt?.toISOString() ?? null}
+                    approverName={detail.baseline.approverName}
+                    survey={detail.baseline.survey}
+                  />
                 </Card>
 
                 <Card title="ความพร้อมล่าสุด">

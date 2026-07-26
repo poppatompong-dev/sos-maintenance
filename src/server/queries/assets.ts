@@ -51,6 +51,13 @@ export interface AssetDetail {
   status: ReadinessStatus;
   lifecycle: string;
   baselineApproved: boolean;
+  /** Approval evidence, so the UI can be honest about why it is or isn't possible. */
+  baseline: {
+    approvedAt: Date | null;
+    approverName: string | null;
+    /** Most recent INITIAL_SURVEY work order for this asset, if any. */
+    survey: { code: string; status: string } | null;
+  };
   longitude: number;
   latitude: number;
   components: {
@@ -116,6 +123,8 @@ export async function getAssetDetail(
       currentReadiness: true,
       lifecycle: true,
       baselineApproved: true,
+      baselineApprovedAt: true,
+      baselineApprover: { select: { displayName: true } },
       longitude: true,
       latitude: true,
       components: {
@@ -143,12 +152,27 @@ export async function getAssetDetail(
 
   if (!a) return null;
   const snap = a.readinessSnapshots[0] ?? null;
+
+  // The initial survey is fetched separately: the `workOrders` selection above
+  // is filtered to *active* work orders for the "in progress" card, and a
+  // survey that matters here is usually already CLOSED.
+  const survey = await client.workOrder.findFirst({
+    where: { asset: { code }, kind: 'INITIAL_SURVEY' },
+    orderBy: { createdAt: 'desc' },
+    select: { code: true, status: true },
+  });
+
   return {
     code: a.code,
     name: a.name,
     status: a.currentReadiness as ReadinessStatus,
     lifecycle: a.lifecycle,
     baselineApproved: a.baselineApproved,
+    baseline: {
+      approvedAt: a.baselineApprovedAt,
+      approverName: a.baselineApprover?.displayName ?? null,
+      survey,
+    },
     longitude: a.longitude,
     latitude: a.latitude,
     components: a.components,
