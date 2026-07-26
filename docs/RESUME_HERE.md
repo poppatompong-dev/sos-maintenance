@@ -47,9 +47,19 @@ engineering** — it happens on the municipality's timeline, not in a coding
 session.
 
 **Also open, tracked in the CSV, not part of the 5:** `QA-02` (no Playwright
-E2E / a11y smoke in CI), `QA-03` (CI last confirmed green on commit `2613940`,
-not on the commits since — re-confirm before relying on it), `OPS-01`
-(backup script exists, a restore has never actually been performed).
+E2E / a11y smoke in CI) and `OPS-01` (backup script exists, a restore has
+never actually been performed). `QA-03` is now **closed** — CI is confirmed
+green on HEAD (`622e192`), both the `quality` and `integration` jobs, which
+also re-establishes coverage for the QR-scan / photo-storage / offline-queue /
+technician-picker / security-gate commits that had never been re-confirmed.
+
+> **CI note worth knowing before you panic at a red run:** the `integration`
+> job pulls `postgis/postgis:16-3.4` from Docker Hub and that pull times out
+> occasionally (it did on `64837e2` on 2026-07-26). The symptom is
+> `Error response from daemon: ... context deadline exceeded` during
+> "Initialize containers", with the `quality` job green. That is infrastructure,
+> not your code — `gh run rerun <id> --failed` is the fix. Read the log before
+> assuming a regression.
 
 **Small known defect, not yet ticketed anywhere else:** the readiness reason
 for `CRITICAL_RESULT_MISSING` renders in Thai UI as
