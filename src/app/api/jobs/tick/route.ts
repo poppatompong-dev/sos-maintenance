@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { createPrismaJobTickPort } from '@/server/adapters/prisma-job-tick-port';
+import { createSmtpEmailTransport } from '@/server/email/transport';
 import { runJobTick } from '@/server/services/run-job-tick';
 import { errorResponse, json } from '@/server/http/respond';
 
@@ -12,6 +13,7 @@ import { errorResponse, json } from '@/server/http/respond';
 export const dynamic = 'force-dynamic';
 
 const port = createPrismaJobTickPort();
+const emailTransport = createSmtpEmailTransport();
 
 function timingSafeEquals(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -42,7 +44,10 @@ export async function GET(req: Request): Promise<Response> {
     return json({ error: 'UNAUTHORIZED', message: 'cron secret ไม่ถูกต้อง' }, 401);
   }
   try {
-    const summary = await runJobTick(port, { now: new Date() });
+    const summary = await runJobTick(port, {
+      now: new Date(),
+      emailTransport,
+    });
     return json(summary);
   } catch (err) {
     return errorResponse(err);

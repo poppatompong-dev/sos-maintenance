@@ -6,6 +6,7 @@ import {
   type PendingNotification,
 } from './run-job-tick';
 import type { ReadinessReason, ReadinessStatus } from '@/domain/readiness';
+import { createMockEmailTransport, type SendEmailInput } from '@/server/email/transport';
 
 /**
  * In-memory port with a CAS-accurate `tryMarkNotificationSent`: it succeeds only
@@ -20,6 +21,7 @@ function portWith(
   } = {},
 ) {
   const claimed = new Set(opts.alreadySent ?? []);
+  const failedList: { id: string; error: string }[] = [];
   const persistedSnapshots: {
     assetId: string;
     status: ReadinessStatus;
@@ -33,19 +35,23 @@ function portWith(
       claimed.add(id);
       return true;
     }),
+    tryMarkNotificationFailed: vi.fn(async (id, error) => {
+      failedList.push({ id, error });
+      return true;
+    }),
     countActiveAssets: vi.fn(async () => opts.assets ?? 27),
     loadActiveAssetsForRecompute: vi.fn(async () => opts.candidates ?? []),
     persistReadinessRecompute: vi.fn(async (assetId, status, reasons) => {
       persistedSnapshots.push({ assetId, status, reasons });
     }),
   };
-  return { port, claimed, persistedSnapshots };
+  return { port, claimed, failedList, persistedSnapshots };
 }
 
 const now = new Date('2026-07-22T00:00:00Z');
 
 describe('runJobTick', () => {
-  it('sends in-app notifications and defers email ones', async () => {
+  it('sends in-app notifications and defers email ones when no email transport is provided', async () => {
     const { port, claimed } = portWith([
       { id: 'n1', channel: 'IN_APP' },
       { id: 'n2', channel: 'EMAIL' },
@@ -56,6 +62,58 @@ describe('runJobTick', () => {
     expect(res.notificationsDeferred).toBe(1);
     expect(res.assetsInScope).toBe(27);
     expect([...claimed].sort()).toEqual(['n1', 'n3']);
+  });
+
+  it('dispatches EMAIL notifications when emailTransport and recipientEmail are provided (OPS-05)', async () => {
+    const emailLog: SendEmailInput[] = [];
+    const mockTransport = createMockEmailTransport(emailLog);
+
+    const { port, claimed } = portWith([
+      {
+        id: 'e1',
+        channel: 'EMAIL',
+        subject: 'เสา EP01 ใช้งานไม่ได้',
+        body: 'เสา EP01 เกิดข้อขัดข้องวิกฤต',
+        recipientEmail: 'planner@nakhonsawan.go.th',
+      },
+    ]);
+
+    const res = await runJobTick(port, {
+      now,
+      emailTransport: mockTransport,
+    });
+
+    expect(res.notificationsSent).toBe(1);
+    expect(res.notificationsDeferred).toBe(0);
+    expect(claimed.has('e1')).toBe(true);
+    expect(emailLog).toHaveLength(1);
+    expect(emailLog[0].to).toBe('planner@nakhonsawan.go.th');
+    expect(emailLog[0].subject).toBe('เสา EP01 ใช้งานไม่ได้');
+  });
+
+  it('marks EMAIL notification FAILED when email transport fails (OPS-05)', async () => {
+    const mockFailingTransport = createMockEmailTransport([], true);
+
+    const { port, failedList } = portWith([
+      {
+        id: 'e2',
+        channel: 'EMAIL',
+        subject: 'การซิงก์ล้มเหลว',
+        body: 'พบข้อผิดพลาด',
+        recipientEmail: 'tech@nakhonsawan.go.th',
+      },
+    ]);
+
+    const res = await runJobTick(port, {
+      now,
+      emailTransport: mockFailingTransport,
+    });
+
+    expect(res.notificationsSent).toBe(0);
+    expect(res.notificationsFailed).toBe(1);
+    expect(failedList).toHaveLength(1);
+    expect(failedList[0].id).toBe('e2');
+    expect(failedList[0].error).toContain('Connection refused');
   });
 
   it('does NOT count a notification already claimed by another tick', async () => {
@@ -76,6 +134,7 @@ describe('runJobTick', () => {
     const res = await runJobTick(port, { now });
     expect(res).toMatchObject({
       notificationsSent: 0,
+      notificationsFailed: 0,
       notificationsDeferred: 0,
       assetsInScope: 27,
       assetsRecomputed: 0,

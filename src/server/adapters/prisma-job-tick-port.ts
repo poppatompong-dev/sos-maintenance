@@ -8,7 +8,7 @@ import type {
 } from '../services/run-job-tick';
 import { loadAssetReadinessFacts } from './readiness-facts-loader';
 
-/** Prisma adapter for the job tick (includes RDY-06 scheduled readiness recompute). */
+/** Prisma adapter for the job tick (includes OPS-05 email & RDY-06 scheduled readiness recompute). */
 export function createPrismaJobTickPort(
   client: PrismaClient = defaultPrisma,
 ): JobTickPort {
@@ -18,9 +18,21 @@ export function createPrismaJobTickPort(
         where: { status: 'PENDING' },
         orderBy: { createdAt: 'asc' },
         take: limit,
-        select: { id: true, channel: true },
+        select: {
+          id: true,
+          channel: true,
+          subject: true,
+          body: true,
+          recipient: { select: { email: true } },
+        },
       });
-      return rows.map((r) => ({ id: r.id, channel: r.channel }));
+      return rows.map((r) => ({
+        id: r.id,
+        channel: r.channel,
+        subject: r.subject,
+        body: r.body,
+        recipientEmail: r.recipient?.email ?? null,
+      }));
     },
 
     async tryMarkNotificationSent(id: string, now: Date): Promise<boolean> {
@@ -31,6 +43,21 @@ export function createPrismaJobTickPort(
       const res = await client.notification.updateMany({
         where: { id, status: 'PENDING' },
         data: { status: 'SENT', sentAt: now, attempts: { increment: 1 } },
+      });
+      return res.count === 1;
+    },
+
+    async tryMarkNotificationFailed(
+      id: string,
+      error: string,
+    ): Promise<boolean> {
+      const res = await client.notification.updateMany({
+        where: { id, status: 'PENDING' },
+        data: {
+          status: 'FAILED',
+          lastError: error,
+          attempts: { increment: 1 },
+        },
       });
       return res.count === 1;
     },

@@ -5,6 +5,23 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-28 — SMTP email transport (`OPS-05`) — third of the 5 agreed gaps
+
+**Why:** Gap 3 of the 5 agreed release gaps (`OPS-05` / UAT case 4). `runJobTick` previously left `EMAIL` channel notifications in `PENDING` indefinitely because no transport was wired. Wiring Nodemailer enables real email alert delivery for critical events (e.g. `ASSET_DOWN`, `REPAIR_REJECTED`, `SYNC_FAILED`).
+
+**What was built:**
+1. **Email transport module (`src/server/email/transport.ts`):** `EmailTransport` interface with Nodemailer SMTP implementation (`createSmtpEmailTransport`) and a test mock (`createMockEmailTransport`). Free/OSS dependency `nodemailer` (MIT) added.
+2. **Job tick integration (`src/server/services/run-job-tick.ts`):** `runJobTick` now attempts delivery for `EMAIL` channel notifications when `emailTransport` and `recipientEmail` exist, flipping status to `SENT` on success or calling `tryMarkNotificationFailed` (`FAILED` with `lastError`) on error. When unconfigured, notifications safely remain `PENDING`.
+3. **Prisma port update (`src/server/adapters/prisma-job-tick-port.ts`):** `claimPendingNotifications` now queries `subject`, `body`, and `recipient.email`. Added `tryMarkNotificationFailed` to record error details.
+4. **API Route (`src/app/api/jobs/tick/route.ts`):** Instantiated `createSmtpEmailTransport()` and passed it into `runJobTick`.
+5. **Traceability:** Updated `requirements-traceability.csv` (`OPS-05`: NOT_STARTED → DONE, 24 DONE / 19 PARTIAL / 5 NOT_STARTED).
+
+**Verification:**
+- `pnpm test`: 293 passing (31 files, 6 new unit tests).
+- `pnpm typecheck`, `pnpm lint`, `pnpm build`: clean.
+
+---
+
 ## 2026-07-28 — Scheduled readiness recompute (`RDY-06`) & UI Modernization (Option 3)
 
 **Why:** Gap 2 of the 5 agreed release gaps (`RDY-06`). An asset whose due date expired while quiet previously never flipped from `WATCH` to `UNKNOWN` until a new inspection or event occurred. Periodic recompute via the daily cron (`/api/jobs/tick`) re-evaluates all active assets against the current clock.
