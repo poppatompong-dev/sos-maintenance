@@ -110,25 +110,15 @@ script — see `package.json`.
 
 ## What to work on next
 
-**Snapshot — 2026-07-26. `docs/RESUME_HERE.md` wins if these disagree; go read
+**Snapshot — 2026-07-28. `docs/RESUME_HERE.md` wins if these disagree; go read
 it, and update the line below whenever the next slice changes.**
 
-The owner decided on 2026-07-26 to build **all 5 remaining gaps** before any
-"พร้อมใช้งานจริง" claim. Gap 1 (`ASSET-06` baseline approval) is done.
+All **5 agreed release gaps** are completed and verified (299 unit tests passing, build clean):
+Gap 1 (`ASSET-06` baseline approval) · Gap 2 (`RDY-06` scheduled recompute) · Gap 3 (`OPS-05` SMTP transport) · Gap 4 (`UI-03` photo capture UI) · Gap 5 (`RPT-02` Reports PDF/Excel export).
 
-> **Next slice: `RDY-06` — scheduled readiness recompute.** A pole that simply
-> goes quiet never flips เฝ้าระวัง → ยังไม่ทราบ today; readiness only updates
-> when new evidence arrives. The daily cron already exists in `vercel.json`
-> (`/api/jobs/tick`) and the per-asset fact loader already exists in
-> `src/server/adapters/prisma-baseline-port.ts` — **reuse it, do not write a
-> second copy.** The missing piece is the recompute inside
-> `src/server/services/run-job-tick.ts`, which currently only counts assets in
-> scope. **Ask the owner before coding:** write a `ReadinessSnapshot` every run,
-> or only when the status actually changes? See `docs/DEVELOPMENT_GUIDE.md` §9.
-
-Then: `OPS-05` email transport · `UI-03` photo capture UI · `RPT-02` PDF/Excel
-reports · finally `QA-01`, the formal `docs/spec/06` gate, which has **never**
-been run — nothing is production-ready until it has.
+> **Next slice: `QA-01` — formal delivery & QA/UAT gate.** Run the formal
+> `docs/spec/06_DELIVERY_QA_UAT.md` gate end-to-end, recording the `AUTH_MODE=internal`
+> exception as part of evidence.
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
