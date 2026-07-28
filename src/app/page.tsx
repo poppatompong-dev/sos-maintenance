@@ -1,4 +1,5 @@
 import { AppRail } from '@/components/AppRail';
+import { HeaderModeSwitcher } from '@/components/HeaderModeSwitcher';
 import { StatusRail } from '@/components/StatusRail';
 import { PoleTable } from '@/components/PoleTable';
 import {
@@ -34,7 +35,8 @@ export default async function DashboardPage() {
                 ศูนย์ควบคุมเสา SOS
               </h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <HeaderModeSwitcher />
               <span className="flex items-center gap-2 text-xs text-muted">
                 <span className="size-2 rounded-full bg-ready" aria-hidden="true" />
                 ข้อมูล ณ {formatThaiDateTime(overview.generatedAt)}

@@ -1,12 +1,12 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../db/client';
-import type { CriticalCheckResult } from '@/domain/readiness';
 import {
   BaselineApprovalError,
   type ApproveBaselinePort,
   type BaselineAssetState,
   type PersistBaselineApprovalInput,
 } from '../services/approve-baseline';
+import { loadAssetReadinessFacts } from './readiness-facts-loader';
 
 /**
  * Prisma adapter for baseline approval (ASSET-06).
@@ -17,41 +17,6 @@ import {
  * READY. Persisting is a single transaction — the approval fields, the
  * immutable snapshot, and the denormalised status move together or not at all.
  */
-
-const OPEN_FAULT_STATUSES = ['OPEN', 'IN_REPAIR', 'RETEST', 'REOPENED'] as const;
-
-/** Work-order states that still expect to be worked (for "next due"). */
-const LIVE_WORK_ORDER_STATUSES = [
-  'DRAFT',
-  'PUBLISHED',
-  'ASSIGNED',
-  'IN_PROGRESS',
-  'SUBMITTED',
-  'REJECTED',
-  'REOPENED',
-] as const;
-
-/** Latest stored result per required critical function; UNKNOWN when absent. */
-function toCriticalChecks(
-  required: { key: string; label: string }[],
-  latestByKey: Map<string, { result: string; observedAt: Date }>,
-): CriticalCheckResult[] {
-  return required.map((fn) => {
-    const latest = latestByKey.get(fn.key);
-    // NA is not evidence that a critical function works — treat it as UNKNOWN
-    // rather than quietly letting the pole pass.
-    const result =
-      latest?.result === 'PASS' || latest?.result === 'FAIL'
-        ? (latest.result as 'PASS' | 'FAIL')
-        : 'UNKNOWN';
-    return {
-      key: fn.key,
-      label: fn.label,
-      result,
-      observedAt: latest?.observedAt ?? null,
-    };
-  });
-}
 
 export function createPrismaBaselinePort(
   client: PrismaClient = defaultPrisma,
@@ -73,10 +38,6 @@ export function createPrismaBaselinePort(
             select: { key: true, name: true },
             orderBy: { key: 'asc' },
           },
-          faults: {
-            where: { status: { in: [...OPEN_FAULT_STATUSES] } },
-            select: { severity: true },
-          },
           workOrders: {
             where: { kind: 'INITIAL_SURVEY' },
             orderBy: { createdAt: 'desc' },
@@ -97,43 +58,7 @@ export function createPrismaBaselinePort(
       });
       if (!asset) return null;
 
-      const required = asset.components.map((c) => ({ key: c.key, label: c.name }));
-
-      // Latest PASS/FAIL per required critical function, across every work
-      // order on this asset.
-      const latestByKey = new Map<string, { result: string; observedAt: Date }>();
-      if (required.length > 0) {
-        const responses = await client.checklistResponse.findMany({
-          where: {
-            workOrder: { assetId: asset.id },
-            item: { criticalFunctionKey: { in: required.map((r) => r.key) } },
-          },
-          orderBy: { observedAt: 'desc' },
-          select: {
-            result: true,
-            observedAt: true,
-            item: { select: { criticalFunctionKey: true } },
-          },
-        });
-        for (const r of responses) {
-          const key = r.item.criticalFunctionKey;
-          if (key && !latestByKey.has(key)) {
-            latestByKey.set(key, { result: r.result, observedAt: r.observedAt });
-          }
-        }
-      }
-
-      // Next scheduled due date across work orders that are still live.
-      const nextDue = await client.workOrder.findFirst({
-        where: {
-          assetId: asset.id,
-          status: { in: [...LIVE_WORK_ORDER_STATUSES] },
-          dueAt: { not: null },
-        },
-        orderBy: { dueAt: 'asc' },
-        select: { dueAt: true },
-      });
-
+      const readinessFacts = await loadAssetReadinessFacts(client, asset.id, asset.components);
       const survey = asset.workOrders[0];
 
       return {
@@ -150,12 +75,7 @@ export function createPrismaBaselinePort(
               submittedByUserId: survey.workLogs[0]?.actorId ?? undefined,
             }
           : undefined,
-        readinessFacts: {
-          criticalChecks: toCriticalChecks(required, latestByKey),
-          openCriticalFault: asset.faults.some((f) => f.severity === 'CRITICAL'),
-          openNonCriticalIssue: asset.faults.some((f) => f.severity === 'NON_CRITICAL'),
-          nextDueAt: nextDue?.dueAt ?? null,
-        },
+        readinessFacts,
       };
     },
 

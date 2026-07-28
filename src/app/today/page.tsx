@@ -1,4 +1,5 @@
 import { SyncState } from '@/components/SyncState';
+import { HeaderModeSwitcher } from '@/components/HeaderModeSwitcher';
 import { TodayWorkspace } from '@/components/TodayWorkspace';
 import { TechnicianBottomNav } from '@/components/TechnicianBottomNav';
 import { ListIcon } from '@/components/icons';
@@ -24,7 +25,7 @@ export default function TodayPage() {
 
   return (
     <div className="mx-auto min-h-full max-w-md bg-bg pb-24">
-      <header className="flex items-center justify-between px-4 py-3">
+      <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
@@ -37,7 +38,10 @@ export default function TodayPage() {
             <strong className="text-sm text-ink">สวัสดีตอนปฏิบัติงาน</strong>
           </div>
         </div>
-        <SyncState />
+        <div className="flex items-center gap-2">
+          <HeaderModeSwitcher />
+          <SyncState />
+        </div>
       </header>
 
       <main className="px-4">

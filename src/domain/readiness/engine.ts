@@ -13,7 +13,8 @@ import {
 
 function message(code: ReadinessReasonCode, label?: string): string {
   const template = READINESS_REASON_MESSAGE_TH[code];
-  return label ? template.replace('{label}', label) : template;
+  if (label) return template.replace('{label}', label);
+  return template.replace(' “{label}”', '').replace('{label}', '');
 }
 
 function reason(

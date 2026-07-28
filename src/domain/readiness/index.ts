@@ -6,6 +6,7 @@ export {
 } from './reason-codes';
 export {
   DEFAULT_GRACE_DAYS,
+  type AssetReadinessFacts,
   type CriticalCheckResult,
   type ReadinessInput,
   type ReadinessReason,

@@ -5,6 +5,23 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-28 — Scheduled readiness recompute (`RDY-06`) & UI Modernization (Option 3)
+
+**Why:** Gap 2 of the 5 agreed release gaps (`RDY-06`). An asset whose due date expired while quiet previously never flipped from `WATCH` to `UNKNOWN` until a new inspection or event occurred. Periodic recompute via the daily cron (`/api/jobs/tick`) re-evaluates all active assets against the current clock.
+
+**What was built:**
+1. **Shared facts loader (`src/server/adapters/readiness-facts-loader.ts`):** Extracted `loadAssetReadinessFacts` so both baseline approval (`prisma-baseline-port.ts`) and job tick (`prisma-job-tick-port.ts`) load critical check results, open faults, and next due date without duplicating queries. Also fixed tech debt in `src/domain/readiness/engine.ts` where unreplaced `{label}` leaked when `criticalChecks` was empty.
+2. **Recompute logic (`src/server/services/run-job-tick.ts`):** `runJobTick` now fetches active candidates, evaluates `evaluateReadiness()`, and persists a new `ReadinessSnapshot` (trigger `RECONCILIATION`) if status or reasons changed.
+3. **Prisma port (`src/server/adapters/prisma-job-tick-port.ts`):** Implemented `loadActiveAssetsForRecompute` and `persistReadinessRecompute`.
+4. **UI Modernization Option 3 (Unified Adaptive Hybrid):** Added `HeaderModeSwitcher` (`src/components/HeaderModeSwitcher.tsx`) allowing smooth visual switching between Executive Control Dashboard (`/`) and Technician Field Shell (`/today`).
+5. **Traceability:** Updated `requirements-traceability.csv` (`RDY-06`: NOT_STARTED → DONE).
+
+**Verification:**
+- `pnpm test`: 287 passing (30 files, 2 new unit tests).
+- `pnpm typecheck`, `pnpm lint`, `pnpm build`: all clean.
+
+---
+
 ## 2026-07-26 — Baseline approval (`ASSET-06`) — first of the 5 agreed gaps
 
 **Why this one first:** it is the smallest of the five and it unblocks the

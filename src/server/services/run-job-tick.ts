@@ -1,3 +1,10 @@
+import {
+  evaluateReadiness,
+  type AssetReadinessFacts,
+  type ReadinessReason,
+  type ReadinessStatus,
+} from '@/domain/readiness';
+
 /**
  * Job tick (doc 03, serverless variant). The background worker's periodic jobs,
  * runnable as a single on-demand pass so a cron trigger (Vercel Cron / GitHub
@@ -8,12 +15,23 @@
  *  - notification dispatch: PENDING in-app notifications are delivered (marked
  *    SENT). Email notifications are DEFERRED until the SMTP transport lands
  *    (Nodemailer, later) — left PENDING, never dropped.
- *  - readiness reconciliation: reports assets in scope (full recompute is a later
- *    sprint; kept as a scope signal for observability).
+ *  - readiness reconciliation (RDY-06): periodic recompute of all active assets
+ *    against current time (e.g. flipping WATCH→UNKNOWN when grace period expires).
+ *    Writes a ReadinessSnapshot with trigger TIME_ELAPSED whenever status or reasons flip.
  */
 export interface PendingNotification {
   id: string;
   channel: string;
+}
+
+export interface AssetRecomputeCandidate {
+  id: string;
+  code: string;
+  baselineApproved: boolean;
+  retired: boolean;
+  currentReadinessStatus: ReadinessStatus | null;
+  currentReadinessReasons: ReadinessReason[] | null;
+  readinessFacts: AssetReadinessFacts;
 }
 
 export interface JobTickPort {
@@ -27,6 +45,15 @@ export interface JobTickPort {
    */
   tryMarkNotificationSent(id: string, now: Date): Promise<boolean>;
   countActiveAssets(): Promise<number>;
+  /** Fetch active non-retired assets with readiness facts for periodic recompute. */
+  loadActiveAssetsForRecompute?(): Promise<AssetRecomputeCandidate[]>;
+  /** Persist a new ReadinessSnapshot and update asset currentReadiness on status/reason change. */
+  persistReadinessRecompute?(
+    assetId: string,
+    status: ReadinessStatus,
+    reasons: ReadinessReason[],
+    now: Date,
+  ): Promise<void>;
 }
 
 export interface JobTickResult {
@@ -34,12 +61,35 @@ export interface JobTickResult {
   notificationsSent: number;
   notificationsDeferred: number;
   assetsInScope: number;
+  assetsRecomputed: number;
+  readinessFlips: number;
 }
 
 export interface JobTickOptions {
   now: Date;
   /** Max notifications to process this tick (keeps each run bounded). */
   limit?: number;
+}
+
+function hasReadinessChanged(
+  currentStatus: ReadinessStatus | null,
+  currentReasons: ReadinessReason[] | null,
+  newStatus: ReadinessStatus,
+  newReasons: ReadinessReason[],
+): boolean {
+  if (currentStatus === null || currentStatus !== newStatus) return true;
+  if (currentReasons === null) return true;
+  if (currentReasons.length !== newReasons.length) return true;
+  for (let i = 0; i < currentReasons.length; i++) {
+    if (
+      currentReasons[i].code !== newReasons[i].code ||
+      currentReasons[i].message !== newReasons[i].message ||
+      currentReasons[i].sourceRef !== newReasons[i].sourceRef
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export async function runJobTick(
@@ -65,10 +115,47 @@ export async function runJobTick(
 
   const assetsInScope = await port.countActiveAssets();
 
+  let assetsRecomputed = 0;
+  let readinessFlips = 0;
+
+  if (port.loadActiveAssetsForRecompute && port.persistReadinessRecompute) {
+    const candidates = await port.loadActiveAssetsForRecompute();
+    for (const asset of candidates) {
+      assetsRecomputed += 1;
+      const evaluation = evaluateReadiness({
+        now: opts.now,
+        baselineApproved: asset.baselineApproved,
+        criticalChecks: asset.readinessFacts.criticalChecks,
+        openCriticalFault: asset.readinessFacts.openCriticalFault,
+        openNonCriticalIssue: asset.readinessFacts.openNonCriticalIssue,
+        nextDueAt: asset.readinessFacts.nextDueAt,
+      });
+
+      if (
+        hasReadinessChanged(
+          asset.currentReadinessStatus,
+          asset.currentReadinessReasons,
+          evaluation.status,
+          evaluation.reasons,
+        )
+      ) {
+        readinessFlips += 1;
+        await port.persistReadinessRecompute(
+          asset.id,
+          evaluation.status,
+          evaluation.reasons,
+          opts.now,
+        );
+      }
+    }
+  }
+
   return {
     ranAt: opts.now,
     notificationsSent: sent,
     notificationsDeferred: deferred,
     assetsInScope,
+    assetsRecomputed,
+    readinessFlips,
   };
 }

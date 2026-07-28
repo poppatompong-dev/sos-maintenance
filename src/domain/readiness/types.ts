@@ -18,6 +18,14 @@ export interface CriticalCheckResult {
   observedAt?: Date | null;
 }
 
+/** Evidence facts gathered for an asset before evaluating readiness. */
+export interface AssetReadinessFacts {
+  criticalChecks: CriticalCheckResult[];
+  openCriticalFault: boolean;
+  openNonCriticalIssue: boolean;
+  nextDueAt: Date | null;
+}
+
 /**
  * Full evidence snapshot fed to the pure readiness engine. The caller (an
  * application service) is responsible for assembling this from the latest
