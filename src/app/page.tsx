@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { AppRail } from '@/components/AppRail';
 import { HeaderModeSwitcher } from '@/components/HeaderModeSwitcher';
 import { ReportExportButton } from '@/components/ReportExportButton';
@@ -97,21 +98,15 @@ export default async function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  title="รอระบบบันทึกรูปถ่ายภาคสนามก่อนจึงจะเริ่มสำรวจได้"
-                  className="mt-4 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-border bg-panel px-4 py-2.5 text-sm font-semibold text-muted"
+                <Link
+                  href="/today"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-brand-hover active:scale-[0.99]"
                 >
                   <ClipboardIcon size={17} />
                   เริ่มสำรวจตั้งต้น
-                </button>
+                </Link>
                 <p className="mt-3 text-center text-xs text-muted tabular-nums">
-                  {needSurvey} จุดรอการสำรวจ
-                </p>
-                <p className="mt-1.5 text-center text-[0.6875rem] leading-relaxed text-muted/80">
-                  ยังเริ่มไม่ได้ — รอระบบบันทึกรูปถ่ายภาคสนาม (การสำรวจตั้งต้นต้องมีหลักฐานภาพ)
+                  {needSurvey} จุดรอการสำรวจ (พร้อมถ่ายภาพและบันทึกข้อมูลหน้างาน)
                 </p>
               </div>
             </aside>
