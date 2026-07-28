@@ -90,3 +90,14 @@ const FAULT_SEVERITY_TH: Record<string, string> = {
 export function faultSeverityLabel(code: string): string {
   return FAULT_SEVERITY_TH[code] ?? GENERIC_STATE_TH;
 }
+
+const READINESS_STATUS_TH: Record<string, string> = {
+  READY: 'พร้อมใช้',
+  WATCH: 'เฝ้าระวัง',
+  DOWN: 'ใช้งานไม่ได้',
+  UNKNOWN: 'ยังไม่ทราบ',
+};
+
+export function readinessStatusLabel(code: string): string {
+  return READINESS_STATUS_TH[code] ?? GENERIC_STATE_TH;
+}

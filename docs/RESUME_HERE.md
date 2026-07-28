@@ -12,24 +12,23 @@
 > four remaining gaps.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-28 — **Gap 4 (`UI-03` Photo Capture UI) is DONE**:
-PhotoCaptureInput component + `submitInspection` `PHOTO_REQUIRED` server validation + unit tests (295/295 passing) + typecheck + lint + build clean.
-`requirements-traceability.csv` updated (25 DONE / 19 PARTIAL / 4 NOT_STARTED)._
+_Last updated: 2026-07-28 — **ALL 5 AGREED GAPS ARE DONE**:
+Gap 1 (`ASSET-06` baseline approval) · Gap 2 (`RDY-06` scheduled recompute) · Gap 3 (`OPS-05` SMTP transport) · Gap 4 (`UI-03` photo capture UI) · Gap 5 (`RPT-02` Reports PDF/Excel export).
+299 unit tests passing + typecheck + lint + build clean. `requirements-traceability.csv` updated (26 DONE / 19 PARTIAL / 3 NOT_STARTED)._
 
-## ▶ Next: build the 5 agreed gaps, smallest first
+## ▶ Next: run the formal delivery & QA/UAT gate (`QA-01`)
 
-**Owner decision, 2026-07-26 — do not re-litigate this:** all five gaps get
-built before any "พร้อมใช้งานจริง" claim. Recommended order:
+All five agreed release gaps have been built and verified with unit tests and production build clean:
 
 | Order | Gap | Requirement ID | UAT case | Notes |
 |---|---|---|---|---|
 | ~~1~~ | ~~**Baseline approval workflow**~~ | `ASSET-06` | 1, 11 | ✅ **DONE 2026-07-26** (`e39a6e8` → `64837e2`). |
-| ~~2~~ | ~~**Scheduled readiness recompute**~~ | `RDY-06` | 6 | ✅ **DONE 2026-07-28**. Shared `loadAssetReadinessFacts`, `runJobTick` reevaluates active assets and persists `RECONCILIATION` snapshot on status/reason change. Unit test suite expanded (287 passing). |
-| ~~3~~ | ~~**SMTP email transport**~~ | `OPS-05` | 4 | ✅ **DONE 2026-07-28**. Nodemailer transport (`src/server/email/transport.ts`) + `runJobTick` EMAIL dispatch + `tryMarkNotificationFailed`. 293 unit tests passing. |
-| ~~4~~ | ~~**Photo capture UI**~~ | `UI-03` | 3 | ✅ **DONE 2026-07-28**. `PhotoCaptureInput.tsx` (camera stream + file fallback) + server-side `PHOTO_REQUIRED` enforcement in `submitInspection`. 295 unit tests passing. |
-| 5 | **Reports PDF / Excel** | `RPT-02` | 9, 10 | **NEXT SLICE.** Multi-session. Deserves its own plan doc (use `docs/superpowers/plans/2026-07-23-flexible-field-checklist.md` as the template) before any code. Metrics already share one definition (`src/domain/metrics`), so the data side is ready. |
+| ~~2~~ | ~~**Scheduled readiness recompute**~~ | `RDY-06` | 6 | ✅ **DONE 2026-07-28**. Shared `loadAssetReadinessFacts`, `runJobTick` reevaluates active assets and persists `RECONCILIATION` snapshot on status/reason change. |
+| ~~3~~ | ~~**SMTP email transport**~~ | `OPS-05` | 4 | ✅ **DONE 2026-07-28**. Nodemailer transport (`src/server/email/transport.ts`) + `runJobTick` EMAIL dispatch + `tryMarkNotificationFailed`. |
+| ~~4~~ | ~~**Photo capture UI**~~ | `UI-03` | 3 | ✅ **DONE 2026-07-28**. `PhotoCaptureInput.tsx` (camera stream + file fallback) + server-side `PHOTO_REQUIRED` enforcement in `submitInspection`. |
+| ~~5~~ | ~~**Reports PDF / Excel**~~ | `RPT-02` | 9, 10 | ✅ **DONE 2026-07-28**. `buildReadinessCsv` (UTF-8 BOM Thai CSV) + `GET /api/reports/export` + `ReportExportButton` UI + print view. |
 
-**Next up: `RPT-02` Reports PDF / Excel** (row 5 of the table).
+**Next step:** execute `QA-01`, the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate end-to-end.
 
 After all five: run the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate
 end-to-end (`QA-01`), recording the `AUTH_MODE=internal` exception as part of

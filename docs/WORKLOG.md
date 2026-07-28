@@ -5,6 +5,23 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-28 — Reports PDF / Excel export (`RPT-02`) — fifth & final of the 5 agreed gaps
+
+**Why:** Gap 5 of the 5 agreed release gaps (`RPT-02` / UAT cases 9 & 10). Executives and Planners need to export readiness reports matching the dashboard's exact metrics (`src/domain/metrics`) without raw token leakage or encoding corruption in Microsoft Excel.
+
+**What was built:**
+1. **CSV Exporter (`src/domain/reports/csv-export.ts`):** `buildReadinessCsv` pure domain function generating UTF-8 BOM (`\uFEFF`) CSV with official Thai status labels, Buddhist era dates (พ.ศ.), and metadata summary headers matching `src/domain/metrics`.
+2. **API Route (`src/app/api/reports/export/route.ts`):** `GET /api/reports/export` route gated by RBAC (`report:export` / `report:read` / `asset:read`). Read-only executive capability satisfying UAT case 9.
+3. **UI Export Component (`src/components/ReportExportButton.tsx`):** Added "ส่งออก Excel (CSV)" download trigger and "พิมพ์รายงาน / PDF" print view trigger. Integrated into Executive Control Centre header (`src/app/page.tsx`).
+4. **Presentation Helper (`src/presentation/thai-labels.ts`):** Added `readinessStatusLabel` mapping.
+5. **Traceability:** Updated `requirements-traceability.csv` (`RPT-02`: NOT_STARTED → DONE, 26 DONE / 19 PARTIAL / 3 NOT_STARTED — All 5 release gaps completed!).
+
+**Verification:**
+- `pnpm test`: 299 passing (32 files, 4 new unit tests).
+- `pnpm typecheck`, `pnpm lint`, `pnpm build`: clean.
+
+---
+
 ## 2026-07-28 — Photo capture UI & server photo validation (`UI-03`) — fourth of the 5 agreed gaps
 
 **Why:** Gap 4 of the 5 agreed release gaps (`UI-03` / UAT case 3). The evidence storage backend was built (`SEC-03`), but client-side photo capture UI and server-side `requiresPhoto` enforcement were absent.
