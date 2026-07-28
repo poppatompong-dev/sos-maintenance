@@ -29,6 +29,7 @@ export interface VersionItemDef {
   label: string;
   criticality: 'CRITICAL' | 'NON_CRITICAL';
   criticalFunctionKey?: string | null;
+  requiresPhoto?: boolean;
 }
 
 /** Version group definition: which item codes it covers (ordered). */
@@ -64,6 +65,7 @@ function toResponse(
   item: VersionItemDef,
   result: ResponseResult,
   note?: string,
+  attachmentIds?: string[],
 ): EvaluatedResponse {
   return {
     itemCode: item.code,
@@ -71,6 +73,8 @@ function toResponse(
     result,
     criticality: item.criticality,
     ...(item.criticalFunctionKey ? { criticalFunctionKey: item.criticalFunctionKey } : {}),
+    ...(item.requiresPhoto ? { requiresPhoto: true } : {}),
+    ...(attachmentIds ? { attachmentIds } : {}),
     ...(note ? { note } : {}),
   };
 }

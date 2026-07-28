@@ -114,6 +114,16 @@ export async function submitInspection(
     );
   }
 
+  // 5.5. Photo evidence requirement rule (UI-03).
+  for (const resp of payload.responses) {
+    if (resp.requiresPhoto && (!resp.attachmentIds || resp.attachmentIds.length === 0)) {
+      throw new InspectionError(
+        'PHOTO_REQUIRED',
+        `กรุณาแนบรูปถ่ายประกอบการสำรวจสำหรับ “${resp.label}”`,
+      );
+    }
+  }
+
   // 6. Faults from failed items.
   const faults = deriveFaults(payload.workOrderId, payload.responses);
   const openNonCriticalIssue =

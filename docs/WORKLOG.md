@@ -5,6 +5,23 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-28 — Photo capture UI & server photo validation (`UI-03`) — fourth of the 5 agreed gaps
+
+**Why:** Gap 4 of the 5 agreed release gaps (`UI-03` / UAT case 3). The evidence storage backend was built (`SEC-03`), but client-side photo capture UI and server-side `requiresPhoto` enforcement were absent.
+
+**What was built:**
+1. **PhotoCaptureInput component (`src/components/PhotoCaptureInput.tsx`):** Client component using device camera (`navigator.mediaDevices.getUserMedia`) with automatic fallback to `<input type="file" capture="environment">`. Provides live preview, image capture, thumbnail preview, and upload to `POST /api/attachments`.
+2. **Icons (`src/components/icons.tsx`):** Added line icons `CameraIcon`, `TrashIcon`, and `UploadIcon`.
+3. **Server-side photo validation (`src/server/services/submit-inspection.ts`):** `submitInspection` now validates items where `requiresPhoto: true`, throwing `PHOTO_REQUIRED` ("กรุณาแนบรูปถ่ายประกอบการสำรวจสำหรับ...") if mandatory photo evidence is omitted.
+4. **Domain & canonicalize updates (`src/domain/checklist/`):** Added `requiresPhoto` and `attachmentIds` to `EvaluatedResponse` and `VersionItemDef`.
+5. **Traceability:** Updated `requirements-traceability.csv` (`UI-03`: NOT_STARTED → DONE, 25 DONE / 19 PARTIAL / 4 NOT_STARTED).
+
+**Verification:**
+- `pnpm test`: 295 passing (31 files, 2 new unit tests).
+- `pnpm typecheck`, `pnpm lint`, `pnpm build`: clean.
+
+---
+
 ## 2026-07-28 — SMTP email transport (`OPS-05`) — third of the 5 agreed gaps
 
 **Why:** Gap 3 of the 5 agreed release gaps (`OPS-05` / UAT case 4). `runJobTick` previously left `EMAIL` channel notifications in `PENDING` indefinitely because no transport was wired. Wiring Nodemailer enables real email alert delivery for critical events (e.g. `ASSET_DOWN`, `REPAIR_REJECTED`, `SYNC_FAILED`).

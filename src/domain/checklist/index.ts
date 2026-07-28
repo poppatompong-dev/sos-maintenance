@@ -13,6 +13,10 @@ export interface EvaluatedResponse {
   observedAt?: Date | null;
   /** Symptom note / could-not-test reason / general note, persisted to ChecklistResponse.note. */
   note?: string;
+  /** True when photo evidence is mandatory for this item. */
+  requiresPhoto?: boolean;
+  /** Attached photo evidence attachment UUIDs. */
+  attachmentIds?: string[];
 }
 
 /** A required critical function (key + Thai label). */

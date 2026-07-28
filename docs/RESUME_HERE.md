@@ -12,9 +12,9 @@
 > four remaining gaps.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-28 — **Gap 3 (`OPS-05` SMTP Email Transport) is DONE**:
-Nodemailer transport wired + `runJobTick` EMAIL dispatch + `tryMarkNotificationFailed` + unit tests (293/293 passing) + typecheck + lint + build clean.
-`requirements-traceability.csv` updated (24 DONE / 19 PARTIAL / 5 NOT_STARTED)._
+_Last updated: 2026-07-28 — **Gap 4 (`UI-03` Photo Capture UI) is DONE**:
+PhotoCaptureInput component + `submitInspection` `PHOTO_REQUIRED` server validation + unit tests (295/295 passing) + typecheck + lint + build clean.
+`requirements-traceability.csv` updated (25 DONE / 19 PARTIAL / 4 NOT_STARTED)._
 
 ## ▶ Next: build the 5 agreed gaps, smallest first
 
@@ -26,10 +26,10 @@ built before any "พร้อมใช้งานจริง" claim. Recommen
 | ~~1~~ | ~~**Baseline approval workflow**~~ | `ASSET-06` | 1, 11 | ✅ **DONE 2026-07-26** (`e39a6e8` → `64837e2`). |
 | ~~2~~ | ~~**Scheduled readiness recompute**~~ | `RDY-06` | 6 | ✅ **DONE 2026-07-28**. Shared `loadAssetReadinessFacts`, `runJobTick` reevaluates active assets and persists `RECONCILIATION` snapshot on status/reason change. Unit test suite expanded (287 passing). |
 | ~~3~~ | ~~**SMTP email transport**~~ | `OPS-05` | 4 | ✅ **DONE 2026-07-28**. Nodemailer transport (`src/server/email/transport.ts`) + `runJobTick` EMAIL dispatch + `tryMarkNotificationFailed`. 293 unit tests passing. |
-| 4 | **Photo capture UI** | `UI-03` | 3 | **NEXT SLICE.** Storage backend done (`SEC-03`). Owner already chose the initial-survey checklist as the first home for it (2026-07-25). `QrScanner.tsx`'s `getUserMedia` is the nearest precedent. |
-| 5 | **Reports PDF / Excel** | `RPT-02` | 9, 10 | Multi-session. Deserves its own plan doc (use `docs/superpowers/plans/2026-07-23-flexible-field-checklist.md` as the template) before any code. Metrics already share one definition (`src/domain/metrics`), so the data side is ready. |
+| ~~4~~ | ~~**Photo capture UI**~~ | `UI-03` | 3 | ✅ **DONE 2026-07-28**. `PhotoCaptureInput.tsx` (camera stream + file fallback) + server-side `PHOTO_REQUIRED` enforcement in `submitInspection`. 295 unit tests passing. |
+| 5 | **Reports PDF / Excel** | `RPT-02` | 9, 10 | **NEXT SLICE.** Multi-session. Deserves its own plan doc (use `docs/superpowers/plans/2026-07-23-flexible-field-checklist.md` as the template) before any code. Metrics already share one definition (`src/domain/metrics`), so the data side is ready. |
 
-**Next up: `UI-03` Photo capture UI** (row 4 of the table).
+**Next up: `RPT-02` Reports PDF / Excel** (row 5 of the table).
 
 After all five: run the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate
 end-to-end (`QA-01`), recording the `AUTH_MODE=internal` exception as part of

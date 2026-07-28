@@ -105,6 +105,43 @@ describe('submitInspection (vertical slice)', () => {
     expect(r.faults?.some((f) => f.severity === 'CRITICAL')).toBe(true);
   });
 
+  it('rejects an item requiring a photo when no photo attachment is provided (UI-03)', async () => {
+    const responses: EvaluatedResponse[] = [
+      ...passing,
+      {
+        itemCode: 'i_survey_pole_photo',
+        label: 'ภาพถ่ายโครงสร้างเสาโดยรวม',
+        result: 'PASS',
+        criticality: 'NON_CRITICAL',
+        requiresPhoto: true,
+        attachmentIds: [],
+      },
+    ];
+    const port = new InMemoryPort();
+    await expect(submitInspection(port, command({ responses }))).rejects.toMatchObject({
+      code: 'PHOTO_REQUIRED',
+    });
+    expect(port.persisted).toHaveLength(0);
+  });
+
+  it('accepts an item requiring a photo when photo attachmentId is present (UI-03)', async () => {
+    const responses: EvaluatedResponse[] = [
+      ...passing,
+      {
+        itemCode: 'i_survey_pole_photo',
+        label: 'ภาพถ่ายโครงสร้างเสาโดยรวม',
+        result: 'PASS',
+        criticality: 'NON_CRITICAL',
+        requiresPhoto: true,
+        attachmentIds: ['att-123-uuid'],
+      },
+    ];
+    const port = new InMemoryPort();
+    const r = await submitInspection(port, command({ responses }));
+    expect(r.idempotentReplay).toBe(false);
+    expect(port.persisted).toHaveLength(1);
+  });
+
   it('GPS beyond 100 m WITH a reason is still recorded and flagged', async () => {
     // ~1 km north
     const gps = { lat: ASSET.lat + 0.01, lng: ASSET.lng, reason: 'ป้ายจุดตรวจถูกบดบัง ต้องยืนห่างจากเสา' };
