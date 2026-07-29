@@ -19,6 +19,12 @@ readiness overview 27 จุดเป็น UNKNOWN ตามข้อมูล 
 `/today/scan`, bootstrap และ report export ตอบ 200; report export เป็น Thai
 UTF-8 CSV พร้อม Content-Disposition สำหรับ Excel.
 
+**FACT:** Browser smoke เพิ่มเติมบน local `:3100` ผ่านแบบจำกัดขอบเขต: dashboard
+มี DOM table 27 แถวและ `lang=th`; ที่ viewport 375×812 หน้า `/today` แสดงวันที่
+พ.ศ. และ empty state จริง; `/today/scan` มี manual QR fallback, กรอก `EP01`
+แล้วไป `/assets/EP01` ได้; browser console errors = 0; ปุ่ม export มี contrast
+16.44:1. ยังไม่ได้ยอมรับ camera permission หรือทำ capture จริง.
+
 **DECISION:** QA-01 ยังเป็น **PARTIAL**, ไม่ประกาศ production-ready. รายละเอียด
 case-by-case และสิ่งที่ยังต้องใช้ข้อมูลจริงอยู่ใน
 `docs/QA-01_EVIDENCE_2026-07-29.md`. คงไว้เป็น blocker: SMTP จริง, browser/mobile
