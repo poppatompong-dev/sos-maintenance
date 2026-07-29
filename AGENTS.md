@@ -110,13 +110,18 @@ script — see `package.json`.
 
 ## What to work on next
 
-**Snapshot — 2026-07-28. `docs/RESUME_HERE.md` wins if these disagree; go read
+**Snapshot — 2026-07-29. `docs/RESUME_HERE.md` wins if these disagree; go read
 it, and update the line below whenever the next slice changes.**
 
-All **5 agreed release gaps** are completed and verified (299 unit tests passing, build clean):
-Gap 1 (`ASSET-06` baseline approval) · Gap 2 (`RDY-06` scheduled recompute) · Gap 3 (`OPS-05` SMTP transport) · Gap 4 (`UI-03` photo capture UI) · Gap 5 (`RPT-02` Reports PDF/Excel export).
+Four agreed release gaps are code-verified (299 unit tests passing, build clean):
+Gap 1 (`ASSET-06` baseline approval) · Gap 2 (`RDY-06` scheduled recompute) · Gap 3 (`OPS-05` SMTP transport) · Gap 5 (`RPT-02` Reports PDF/Excel export).
+`UI-03` has the capture component and server validation, but the current
+`TodayWorkspace` does not consume `PhotoCaptureInput`; browser integration is
+still open.
 
-> **Next slice: `QA-01` — formal delivery & QA/UAT gate.** Run the formal
+> **Next slice: `UI-03` integration, then `QA-01`.** Connect the photo capture
+> flow to initial-survey groups, pass attachment IDs through the inspection
+> envelope, and then run the formal
 > `docs/spec/06_DELIVERY_QA_UAT.md` gate end-to-end, recording the `AUTH_MODE=internal`
 > exception as part of evidence.
 

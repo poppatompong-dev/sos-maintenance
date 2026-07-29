@@ -12,29 +12,36 @@
 > four remaining gaps.
 
 _Always-current pointer. Read this first when you sit down at a machine._
-_Last updated: 2026-07-28 — **ALL 5 AGREED GAPS ARE DONE**:
-Gap 1 (`ASSET-06` baseline approval) · Gap 2 (`RDY-06` scheduled recompute) · Gap 3 (`OPS-05` SMTP transport) · Gap 4 (`UI-03` photo capture UI) · Gap 5 (`RPT-02` Reports PDF/Excel export).
-299 unit tests passing + typecheck + lint + build clean. `requirements-traceability.csv` updated (26 DONE / 19 PARTIAL / 3 NOT_STARTED)._
+_Last updated: 2026-07-29 — **QA-01 remains PARTIAL**. Four release gaps are
+code-verified (`ASSET-06`, `RDY-06`, `OPS-05`, `RPT-02`). `UI-03` has the
+component and server validation, but the current source has no
+`PhotoCaptureInput` consumer in `TodayWorkspace`; initial-survey browser flow
+is therefore not closed. A local API simulation of all 27 poles is recorded in
+[`INITIAL_SURVEY_SIMULATION_RUNBOOK.md`](INITIAL_SURVEY_SIMULATION_RUNBOOK.md).
+_
 
-## ▶ Next: run the formal delivery & QA/UAT gate (`QA-01`)
+## ▶ Next: finish `UI-03` wiring, then complete `QA-01`
 
-All five agreed release gaps have been built and verified with unit tests and production build clean:
+The four code-verified release gaps have been built and verified with unit tests
+and production build clean; `UI-03` remains open for UI integration and browser
+evidence:
 
 | Order | Gap | Requirement ID | UAT case | Notes |
 |---|---|---|---|---|
 | ~~1~~ | ~~**Baseline approval workflow**~~ | `ASSET-06` | 1, 11 | ✅ **DONE 2026-07-26** (`e39a6e8` → `64837e2`). |
 | ~~2~~ | ~~**Scheduled readiness recompute**~~ | `RDY-06` | 6 | ✅ **DONE 2026-07-28**. Shared `loadAssetReadinessFacts`, `runJobTick` reevaluates active assets and persists `RECONCILIATION` snapshot on status/reason change. |
 | ~~3~~ | ~~**SMTP email transport**~~ | `OPS-05` | 4 | ✅ **DONE 2026-07-28**. Nodemailer transport (`src/server/email/transport.ts`) + `runJobTick` EMAIL dispatch + `tryMarkNotificationFailed`. |
-| ~~4~~ | ~~**Photo capture UI**~~ | `UI-03` | 3 | ✅ **DONE 2026-07-28**. `PhotoCaptureInput.tsx` (camera stream + file fallback) + server-side `PHOTO_REQUIRED` enforcement in `submitInspection`. |
+| 4 | **Photo capture UI integration** | `UI-03` | 3 | ⚠️ Component + server rule exist, but no current `TodayWorkspace` consumer was observed 2026-07-29; browser capture remains open. |
 | ~~5~~ | ~~**Reports PDF / Excel**~~ | `RPT-02` | 9, 10 | ✅ **DONE 2026-07-28**. `buildReadinessCsv` (UTF-8 BOM Thai CSV) + `GET /api/reports/export` + `ReportExportButton` UI + print view. |
 
-**Next step:** execute `QA-01`, the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate end-to-end.
+**Next step:** wire and browser-verify `UI-03`, then execute `QA-01`, the formal
+`docs/spec/06_DELIVERY_QA_UAT.md` gate end-to-end.
 
-After all five: run the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate
-end-to-end (`QA-01`), recording the `AUTH_MODE=internal` exception as part of
-it. `CUT-01` (27 poles surveyed with approved baselines) is **operational, not
-engineering** — it happens on the municipality's timeline, not in a coding
-session.
+After the four code-verified gaps and the `UI-03` integration are closed, run
+the formal `docs/spec/06_DELIVERY_QA_UAT.md` gate end-to-end (`QA-01`),
+recording the `AUTH_MODE=internal` exception as part of it. `CUT-01` (27 poles
+surveyed with approved baselines) is **operational, not engineering** — the
+local simulation is not a substitute for the municipality's real field survey.
 
 **Also open, tracked in the CSV, not part of the 5:** `QA-02` (no Playwright
 E2E / a11y smoke in CI) and `OPS-01` (backup script exists, a restore has
@@ -56,6 +63,17 @@ technician-picker / security-gate commits that had never been re-confirmed.
 critical checks existed. `src/domain/readiness/engine.ts` now removes the
 placeholder safely when no label is available; the branch is covered by the
 readiness tests and the fix is recorded in the 2026-07-28 worklog entry.
+
+## Latest handoff checkpoint — 2026-07-29
+
+`QA-01` engineering checks on fresh local `sos_qa` remain recorded as 299 unit
+tests, 80 integration tests, typecheck, lint, build, and limited runtime smoke.
+The separate initial-survey simulation used `sos_initial_sim` and completed
+27/27 closed work orders, 27/27 baseline approvals, 351 responses, 135 DEMO
+attachments, with final readiness `15 READY / 5 WATCH / 3 DOWN / 4 UNKNOWN`.
+The database and attachment files are machine-local and do not travel through
+Git. See [`INITIAL_SURVEY_SIMULATION_RUNBOOK.md`](INITIAL_SURVEY_SIMULATION_RUNBOOK.md)
+for the evidence and the remaining UI caveat.
 
 ## Reference: the 2026-07-25 case-by-case audit that produced the list above
 Every remaining engineering item and every release-blocker from prior

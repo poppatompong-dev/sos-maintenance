@@ -2,18 +2,15 @@
 
 สรุปสั้น ๆ ก่อนเริ่ม แล้วมี **คำสั่งพร้อมใช้หนึ่งชุด** ให้คัดลอกไปวางได้เลยด้านล่าง
 
-> **Checkpoint ปัจจุบัน (2026-07-26, ปิดวัน):**
-> - **เจ้าของงานตัดสินใจแล้ว:** ต้องทำช่องว่างที่เหลือ **ครบทั้ง 5 จุด**
->   ก่อนจะประกาศว่า "พร้อมใช้งานจริง" — ไม่ตัด scope, ไม่ใช้วิธีบันทึกเป็น
->   ข้อจำกัดแล้วปล่อยผ่าน
-> - **`requirements-traceability.csv` รีเฟรชแล้ว** (48 แถว, 22 DONE / 19
->   PARTIAL / 7 NOT_STARTED) — เชื่อถือได้แล้ว ใช้เป็นตัวตัดสินว่าอะไรเสร็จจริง
-> - **จุดที่ 1 เสร็จแล้ว:** อนุมัติ baseline (`ASSET-06`) — domain + service +
->   adapter + API + UI, มี integration test กับ Postgres จริง และทดสอบสดในแอปแล้ว
-> - **slice ถัดไป = `RDY-06` คำนวณความพร้อมใหม่ตามเวลา** (ดูตารางลำดับงานใน
->   `docs/RESUME_HERE.md`)
-> - **ยังไม่เคยรัน QA/UAT gate ตาม `docs/spec/06` แบบเป็นทางการ** — ห้ามอ้างว่า
->   พร้อม production
+> **Checkpoint ปัจจุบัน (2026-07-29):**
+> - QA-01 ยังเป็น **PARTIAL**; engineering gates ล่าสุดคือ unit 299,
+>   integration 80 บน `sos_qa`, typecheck/lint/build และ runtime smoke แบบจำกัด
+> - สี่ gap (`ASSET-06`, `RDY-06`, `OPS-05`, `RPT-02`) ถูกบันทึกว่า code-verified
+> - `UI-03` ยังต้องเชื่อม `PhotoCaptureInput` เข้ากับ `TodayWorkspace` และ
+>   ทดสอบ initial-survey capture ใน browser จริง
+> - ผลจำลอง 27 จุดอยู่ใน `docs/INITIAL_SURVEY_SIMULATION_RUNBOOK.md` แต่ฐานข้อมูล
+>   จำลองอยู่เฉพาะเครื่อง office และไม่ติดไปกับ Git
+> - **ยังห้ามอ้างว่า production-ready** และผลจำลองไม่ใช่การสำรวจเสาจริง
 > - Repo (private): **https://github.com/poppatompong-dev/sos-maintenance** — branch `main`
 
 ## เอกสารที่ต้องอ่านก่อนลงมือ (ตามลำดับ)
@@ -23,7 +20,7 @@
    หลักการที่ห้ามแหกพร้อมเหตุผล, ตัวอย่างจริงครบทุกชั้น, กลยุทธ์การทดสอบ,
    กับดักที่เคยเสียเวลามาแล้ว, เกณฑ์ "เสร็จ", จุดเริ่มของงานที่เหลือ)
    **อ่านก่อนเขียนโค้ด**
-4. `docs/WORKLOG.md` (ประวัติ + เหตุผลการตัดสินใจ อ่าน entry 2026-07-26 สองอันบนสุด)
+4. `docs/WORKLOG.md` (ประวัติ + เหตุผลการตัดสินใจ อ่าน entry 2026-07-29 สองอันบนสุด)
 5. `requirements-traceability.csv` (requirement ไหนเสร็จ/ไม่เสร็จ พร้อมหลักฐาน)
 
 > **หมายเหตุ:** flexible field checklist (`docs/superpowers/plans/2026-07-23-…`)
@@ -59,13 +56,13 @@ git add -A && git commit -m "..." && git push   # ★ ก่อนเลิก/�
 2. ยืนยัน checkpoint สะอาดและ sync แล้ว: `git status --short` ต้องไม่มีอะไรค้าง และ branch main ตรงกับ origin/main
 3. อ่านให้ครบก่อนแตะโค้ด: AGENTS.md, docs/RESUME_HERE.md (ตาราง "5 จุด"),
    docs/DEVELOPMENT_GUIDE.md (สำคัญ — วิธีทำ slice, กับดัก, เกณฑ์เสร็จ),
-   docs/WORKLOG.md (สอง entry บนสุดของ 2026-07-26), requirements-traceability.csv
+   docs/WORKLOG.md (สอง entry บนสุดของ 2026-07-29), requirements-traceability.csv
 
 งานหลัก:
-- ทำ slice ถัดไปตามตารางใน docs/RESUME_HERE.md — ตอนนี้คือ RDY-06
-  (คำนวณความพร้อมใหม่ตามเวลา ใน src/server/services/run-job-tick.ts)
-  โดย "ใช้ซ้ำ" logic โหลด readiness facts ที่มีอยู่แล้วใน
-  src/server/adapters/prisma-baseline-port.ts อย่าเขียนซ้ำเป็นชุดที่สอง
+- ทำ slice ถัดไปตามตารางใน docs/RESUME_HERE.md — ตอนนี้คือ UI-03 integration:
+  เชื่อม PhotoCaptureInput กับ initial-survey field groups, อัปโหลดหลักฐานผ่าน
+  attachment API, ส่ง attachmentIds ใน inspection envelope และทดสอบ required-photo
+  refusal ก่อนกลับไปทำ QA-01
 - ทำแบบ test-first (red → green → refactor), commit เป็น small vertical slice
 - ยึดกติกาโปรเจกต์ปัจจุบัน (AGENTS.md) และอ่าน Next.js local docs ใน node_modules/next/dist/docs/ ก่อนเขียนโค้ด Next.js
 - **ตรวจในแอปจริงเสมอ ไม่ใช่แค่ให้ test เขียว** — วันที่ 2026-07-26 การทดสอบสด
@@ -96,9 +93,8 @@ Docker volume safety (บังคับ):
 ปิดงาน:
 - รัน gate ครบ: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `git diff --check`,
   และ `pnpm test:integration` — บันทึก exit code และยอด pass/fail ที่ได้จริง
-- baseline ที่ควรได้ (2026-07-26): unit 285 ผ่าน / 30 ไฟล์ · integration 78 ผ่าน / 2 ตก
-  (2 ตัวที่ตกคือ src/app/api/read-routes.itest.ts ซึ่งคาดว่า seed ว่าง แต่ DB เครื่องนั้น
-  มี demo fixture ค้าง — เป็นของเดิม ไม่ใช่ regression)
+- หลักฐานล่าสุด (2026-07-29): unit 299 ผ่าน / 32 ไฟล์ · integration 80 ผ่าน / 16 ไฟล์
+  บนฐานข้อมูล fresh `sos_qa`; ต้องรันซ้ำหลังแก้ UI-03 และอย่าใช้ผลจำลองแทน UAT
 - เมื่อ gate เขียวทั้งหมด ค่อย commit (ต้องมี trailer: Co-Authored-By: Claude <noreply@anthropic.com>) แล้ว push
 
 รายงานปิดท้ายแบบกระชับ FACT / DECISION / NEXT / BLOCKER พร้อม:

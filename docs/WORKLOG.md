@@ -5,6 +5,31 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-29 — Initial survey simulation handoff — VERIFIED / UI FOLLOW-UP OPEN
+
+**FACT:** สร้างฐานข้อมูล local แยก `sos_initial_sim` และใบงานสำรวจตั้งต้น
+`DEMO-LOCAL-INITIAL-EP01` ถึง `EP27` กำหนดวันเริ่ม 16 ตุลาคม 2569 เวลา 09:00
+และกำหนดส่ง 23 ตุลาคม 2569 เวลา 17:00. รันผ่าน API จริงตามลำดับ
+`ASSIGNED → IN_PROGRESS → SUBMITTED → CLOSED` โดย `สมชาย` เป็นผู้ส่งผลและ
+Planner/System Admin เป็นผู้ตรวจรับ/อนุมัติ
+
+**EVIDENCE:** ตรวจจากฐานข้อมูลโดยตรง: 27/27 work orders ปิดแล้ว, 27/27
+baseline approvals, 351 checklist responses, 135 attachments, faults ระดับ
+`NON_CRITICAL` 5 รายการและ `CRITICAL` 3 รายการ. สถานะสุดท้ายคือ
+`READY 15 / WATCH 5 / DOWN 3 / UNKNOWN 4`; EP24 มีเหตุ
+`CRITICAL_RESULT_MISSING` ตามกฎ readiness. เว็บจำลองที่ `:3110` ตอบ HTTP 200.
+
+**BOUNDARY:** เป็นข้อมูลจำลอง local เท่านั้น ไม่แตะ `:3100`, production หรือ
+Neon. ฐานข้อมูลและไฟล์แนบไม่ติดไปกับ Git. รายละเอียดอยู่ใน
+`docs/INITIAL_SURVEY_SIMULATION_RUNBOOK.md`.
+
+**FOLLOW-UP:** แม้ `PhotoCaptureInput.tsx` และ server `PHOTO_REQUIRED` จะมีอยู่
+แต่ source ปัจจุบันยังไม่พบ consumer ใน `TodayWorkspace`; จึงปรับ `UI-03` เป็น
+`PARTIAL` ใน `requirements-traceability.csv`. งานถัดไปคือเชื่อม UI capture,
+ส่ง `attachmentIds` ใน initial-survey flow, browser-verify แล้วค่อยปิด QA-01.
+
+---
+
 ## 2026-07-29 — QA-01 verification checkpoint — PARTIAL
 
 **FACT:** รัน quality gate และ DB-backed integration ใหม่จาก checkout ปัจจุบัน
