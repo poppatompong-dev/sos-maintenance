@@ -51,13 +51,11 @@ technician-picker / security-gate commits that had never been re-confirmed.
 > not your code — `gh run rerun <id> --failed` is the fix. Read the log before
 > assuming a regression.
 
-**Small known defect, not yet ticketed anywhere else:** the readiness reason
-for `CRITICAL_RESULT_MISSING` renders in Thai UI as
-`ไม่มีผลตรวจล่าสุดของฟังก์ชันวิกฤต “{label}”` — the `{label}` placeholder is
-never substituted when that branch fires for "no critical checks at all"
-(`src/domain/readiness/engine.ts`). Found 2026-07-26 while live-verifying
-baseline approval. Pre-existing, tiny, and a UI-honesty problem (operators see
-a raw placeholder). Good candidate for a warm-up slice.
+**Previously noticed defect — resolved 2026-07-28:** the readiness reason for
+`CRITICAL_RESULT_MISSING` could render a raw `{label}` placeholder when no
+critical checks existed. `src/domain/readiness/engine.ts` now removes the
+placeholder safely when no label is available; the branch is covered by the
+readiness tests and the fix is recorded in the 2026-07-28 worklog entry.
 
 ## Reference: the 2026-07-25 case-by-case audit that produced the list above
 Every remaining engineering item and every release-blocker from prior

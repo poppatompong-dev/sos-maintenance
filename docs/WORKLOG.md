@@ -5,6 +5,32 @@ entries at the top. See `RESUME_HERE.md` for the always-current start point.
 
 ---
 
+## 2026-07-29 — QA-01 verification checkpoint — PARTIAL
+
+**FACT:** รัน quality gate และ DB-backed integration ใหม่จาก checkout ปัจจุบัน
+โดยเปิด Postgres local และสร้างฐานข้อมูลแยกชื่อ `sos_qa` เพื่อไม่ปนกับ guarded
+demo database เดิม. `pnpm test` ผ่าน **299/299 ใน 32 files**, `pnpm typecheck`,
+`pnpm lint` และ `pnpm build` ผ่าน. Build ยังมี NFT tracing warning จาก local
+filesystem storage แต่ exit code เป็น 0.
+
+**FACT:** `pnpm test:integration` บนฐานข้อมูล fresh `sos_qa` ผ่าน **80/80 ใน
+16 files**. Runtime smoke บน `http://localhost:3100` ผ่าน: assets 27 จุด,
+readiness overview 27 จุดเป็น UNKNOWN ตามข้อมูล seed จริง, `/today`,
+`/today/scan`, bootstrap และ report export ตอบ 200; report export เป็น Thai
+UTF-8 CSV พร้อม Content-Disposition สำหรับ Excel.
+
+**DECISION:** QA-01 ยังเป็น **PARTIAL**, ไม่ประกาศ production-ready. รายละเอียด
+case-by-case และสิ่งที่ยังต้องใช้ข้อมูลจริงอยู่ใน
+`docs/QA-01_EVIDENCE_2026-07-29.md`. คงไว้เป็น blocker: SMTP จริง, browser/mobile
+UAT, backup restore, `AUTH_MODE=internal` exception และ cutover เสาจริง 27 จุด.
+
+**CLEANUP:** รอบแรกเผลอรัน integration ด้วย `AUTH_MODE=internal` ทำให้ชุด 401/403
+ถูก bypass และทิ้ง fixture ทดสอบไว้ใน local DB. ตรวจพบจากรหัสเฉพาะของ test แล้ว
+ลบเฉพาะ fixture นั้นและสร้าง `sos_qa` แยกใหม่; guarded demo เดิมใน local DB
+เหลือ 2 work orders ตามเดิม.
+
+---
+
 ## 2026-07-28 — Reports PDF / Excel export (`RPT-02`) — fifth & final of the 5 agreed gaps
 
 **Why:** Gap 5 of the 5 agreed release gaps (`RPT-02` / UAT cases 9 & 10). Executives and Planners need to export readiness reports matching the dashboard's exact metrics (`src/domain/metrics`) without raw token leakage or encoding corruption in Microsoft Excel.
